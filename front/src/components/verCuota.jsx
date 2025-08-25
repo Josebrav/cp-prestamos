@@ -47,7 +47,7 @@ export default function VerCuota() {
   const [montoPagado, setMontoPagado] = useState("");
   const [montoEnLetras, setMontoEnLetras] = useState("");
 
-   let montoAPagar = parseFloat(cuota?.monto || 0) + calcularInteres(cuota) ;
+   let montoAPagar = parseFloat(cuota?.montoConInteres || 0);
   useEffect(() => {
     // Traer cuota
     axios.get(`http://localhost:3001/cuotas/${id}`).then((res) => {
@@ -105,6 +105,27 @@ if (montoPagado) {
     setMontoEnLetras(numeroALetras(montoAPagar));
   }, [montoAPagar]);
 
+  useEffect(() => {
+  if (!cuota) return;
+
+  let nuevoMonto = parseFloat(cuota.montoConInteres); // monto original
+
+  if (quitaSeleccionada) {
+    const quita = quitas.find(q => q.tipo === quitaSeleccionada);
+    if (quita && cuota.Prestamo) {
+      const cantidadCuotas = cuota.Prestamo.cuotas?.length || 1;
+      const montoBase = cuota.Prestamo.monto / cantidadCuotas;
+      const interes = (cuota.Prestamo.montoFinal / cantidadCuotas) - montoBase;
+      const descuento = (interes * quita.porcentaje) / 100;
+      nuevoMonto = montoBase + (interes - descuento); // ✅ corregido
+    }
+  }
+
+  setMontoPagado(nuevoMonto.toFixed(2));
+  setMontoEnLetras(numeroALetras(nuevoMonto));
+}, [quitaSeleccionada, cuota, quitas]);
+
+
   if (loading) return <Spinner size="xl" />;
 
   const prestamo = cuota.Prestamo;
@@ -125,87 +146,75 @@ if (montoPagado) {
 
 
   return (
-    <Box>
-      <Flex
-        className="no-print"
-        bg="gray.800"
-        color="white"
-        p={3}
-        
-        align="center"
-      >
-         <Input
-            type="number"
-            value={montoPagado}
-            onChange={(e) => setMontoPagado(e.target.value)}
-            placeholder="Monto recibido"
-            w="200px"
-            ml={2}
-            mr={4}
-          />
-        {estaVencida() ? (
-          <Text fontWeight="bold">
-            Ingrese monto a pagar (mínimo intereses)
-          </Text>
+    <Box >
+      {/* Panel superior (no imprimible) */}
+      <Flex className="no-print" bg="gray.800" color="white" p={3} align="center" position="relative"   // <-- relativo
+  zIndex={10}   >
+        <Input
+          type="number"
+          value={montoPagado}
+          onChange={(e) => setMontoPagado(e.target.value)}
+          placeholder="Monto recibido"
+          w="200px"
+          ml={2}
+          mr={4}
           
+        />
+        {estaVencida() ? (
+          <Text fontWeight="bold">Ingrese monto a pagar (mínimo intereses)</Text>
         ) : (
           <>
-            <Text fontWeight="bold" mr={5}>Aplicar quita</Text>
+            <Text fontWeight="bold" mr={5}>
+              Aplicar quita
+            </Text>
             {quitas.length > 0 && (
-        <Select
-  value={quitaSeleccionada}
-  onChange={(e) => setQuitaSeleccionada(e.target.value)}
-  w="200px"
-  bg="white"
-  color="black"
->
-  <option value="">Sin descuento</option>
-  {quitas.map(q => (
-    <option key={q.id} value={q.tipo}>
-      {q.tipo === "tipo1" ? "Opción 1" : "Opción 2"} ({q.porcentaje}%)
-    </option>
-  ))}
-</Select>
-)}
-
-
+              <Select
+                value={quitaSeleccionada}
+                onChange={(e) => setQuitaSeleccionada(e.target.value)}
+                w="200px"
+                bg="white"
+                color="black"
+              >
+                <option value="">Sin descuento</option>
+                {quitas.map((q) => (
+                  <option key={q.id} value={q.tipo}>
+                    {q.tipo === "tipo1" ? "Opción 1" : "Opción 2"} ({q.porcentaje}%)
+                  </option>
+                ))}
+              </Select>
+            )}
           </>
         )}
       </Flex>
-   
-    <Box w="100%" maxW="100%" position="relative" className="screen-preview">
-      {/* NAVBAR (no imprimible) */}
-      
 
-      {/* Imagen de fondo */}
-      <Box position="relative" top="0" left="0" zIndex={0}>
-        <Image
-          src={recibo}
-          alt="Recibo"
-          width="700px"
-          height="350px"
-          className="no-print"
-        />
-      </Box>
+      {/* Boletas duplicadas */}
+   <Box w="100%" maxW="100%" className="screen-preview" >
+  {[0, 1].map((i) => (
+     <Box
+     
+        key={i}
+        position="absolute"
+        top={`${i * 51}%`} // segunda boleta solo 1% más abajo de la mitad
+        left="0"
+        w="100%"
+        height="47%"      // cada boleta ocupa menos de la mitad para que quepan ambas
+      >
+      {/* Imagen de fondo SOLO para pantalla */}
+      <Image
+        src={recibo}
+        alt="Recibo"
+        width="700px"
+        height="350px"
+        className="no-print"
+        zIndex={0}
+      />
 
-      {/* Contenido encima */}
-      <Box position="absolute" top="0" left="0" w="100%" h="100%" zIndex={1}>
-        <Text
-          position="absolute"
-          top="19px"
-          right="31px"
-          fontWeight="bold"
-          whiteSpace="nowrap"
-        >
+      {/* Contenido de la boleta */}
+      <Box position="absolute" top="0" left="0" w="100%" h="100%">
+        <Text position="absolute" top="19px" right="31px" fontWeight="bold">
           {fechaString}
         </Text>
-        <Text
-          position="absolute"
-          top="44px"
-          right="38px"
-          fontWeight="bold"
-          whiteSpace="nowrap"
-        >
+        <Text position="absolute" top="44px" right="38px" fontWeight="bold">
           N° Control: {prestamo.numeroControl}
         </Text>
         <Text position="absolute" top="70px" left="170px" fontWeight="bold">
@@ -217,43 +226,50 @@ if (montoPagado) {
         <Text position="absolute" top="136px" left="280px" w="50%">
           {montoEnLetras}
         </Text>
-        <Text position="absolute" top="170px" left="280px" fontWeight="bold">
-          $ {montoAPagar.toLocaleString("es-AR")}
+        <Text position="absolute" top="400px"  // +1.5cm abajo
+          left="150px" fontWeight="bold">
+          $ {parseFloat(montoPagado).toLocaleString("es-AR")}
         </Text>
-
-        <Box
-          position="absolute"
-          bottom="40px"
-          left="150px"
-          display="flex"
-          gap={3}
-        >
-         
-          <Button colorScheme="green" onClick={handlePago}>
-            Registrar Pago
-          </Button>
-          <Button colorScheme="blue" onClick={() => window.print()}>
-            Imprimir
-          </Button>
-        </Box>
       </Box>
-
-      <style>
-        {`
-        .screen-preview {
-          transform: scale(0.9);
-          transform-origin: top left;
-        }
-        @media print {
-          .screen-preview { transform: none !important; }
-          .no-print { display: none !important; }
-          button, select, input { display: none !important; }
-          @page { margin: 0; size: auto; }
-          body { margin: 0; padding: 0; }
-        }
-      `}
-      </style>  
     </Box>
-     </Box>
+  ))}
+
+  {/* Botones solo para pantalla */}
+  <Box
+    className="no-print"
+    position="absolute"
+    bottom="40px"
+    left="150px"
+    display="flex"
+    gap={3}
+  >
+    <Button colorScheme="green" onClick={handlePago}>
+      Registrar Pago
+    </Button>
+    <Button colorScheme="blue" onClick={() => window.print()}>
+      Imprimir
+    </Button>
+  </Box>
+</Box>
+
+        {/* Estilos impresión */}
+        <style>
+          {`
+           
+            @media print {
+    .screen-preview {
+      transform: none !important;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .no-print { display: none !important; }
+    button, select, input { display: none !important; }
+    @page { margin: 0; size: auto; }
+  }
+          `}
+        </style>
+      </Box>
+    
   );
 }
