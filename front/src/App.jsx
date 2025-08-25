@@ -12,9 +12,18 @@ import RegistroUsuario from './components/registroUsuario';
 import RegistrarCuotas from './components/registrarCuotas';
 import VerPrestamos from './components/verPrestamos';
 import Header from './components/header';
+import Reportes from './components/reportes';
+import ReportePrestamosMes from './components/reportePrestamoMes';
+import ReporteTotalCobrarMes from './components/totalACobrarMes';
+import ReporteEnLegales from './components/enLegales';
+import RestanteFuturo from './components/restanteFuturo';
+import ReporteSGP from './components/resumen';
+import TotalAcumulado from './components/totalAcumulado';
+import VerCuota from './components/verCuota';
 
 function App() {
   const location = useLocation();
+  const hideHeader = location.pathname.startsWith("/cuota/");
 
   return (
     <Flex
@@ -28,7 +37,7 @@ function App() {
       overflow="auto"
     >
       {/* Header siempre visible */}
-      <Header />
+     {!hideHeader && <Header />}
 
       {/* Contenido principal pegado al header */}
       <Box flex="1" w="100%">
@@ -37,12 +46,20 @@ function App() {
             <Routes location={location}>
               <Route path="/" element={<Inicio />} />
               <Route path="/nuevo-prestamo" element={<Prestamos />} />
-              <Route path="/editar-tasas" element={<EditarTasas />} />
+              <Route path="/administracion" element={<EditarTasas />} />
               <Route path="/registrar-cuota" element={<RegistrarCuotas />} />
               <Route path="/verprestamos/:id" element={<VerPrestamos />} />
               <Route path="/registro-usuario" element={<RegistroUsuario />} />
               <Route path="/prestamos" element={<MostrarPrestamos />} />
               <Route path="/personas" element={<Personas />} />
+              <Route path="/reportes" element={<Reportes />} />
+              <Route path="/reportes/prestamos-mes" element={<ReportePrestamosMes />} />
+              <Route path="/reportes/total-mes" element={<ReporteTotalCobrarMes />} />
+              <Route path='/reportes/legales' element={<ReporteEnLegales />} />
+              <Route path="/reportes/restante-futuro" element={<RestanteFuturo />} />
+              <Route path="/reportes/resumen" element={<ReporteSGP />} />
+              <Route path="/reportes/totalacumulado" element={<TotalAcumulado />} />
+              <Route path="/cuota/:id" element={<VerCuota />} />
               <Route
                 path="*"
                 element={<h1 style={{ padding: '2rem' }}>Ruta no encontrada</h1>}

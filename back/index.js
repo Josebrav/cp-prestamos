@@ -5,6 +5,7 @@ const server = require("./src/server");
 const { conn } = require('./src/database');
 require('./cron/actualizarPrestamosCron');
 const initializeTasas = require('../back/initializeTasas');
+const {QuitaCuotas} = require ('../back/src/database')
 
 const port = process.env.PORT || 3001;
 
@@ -17,7 +18,10 @@ server.get('', (req, res) => {
 
 conn.sync({ force: false }).then(async () => {
   await initializeTasas(); // Inicializa tasas
-  
+  //await QuitaCuotas.bulkCreate([
+  //{ tipo: "tipo1", porcentaje: 10 },
+  //{ tipo: "tipo2", porcentaje: 20 }
+//]);
   server.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });

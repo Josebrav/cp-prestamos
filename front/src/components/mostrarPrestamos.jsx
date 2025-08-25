@@ -26,6 +26,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+
 export default function MostrarPrestamos() {
   const [prestamos, setPrestamos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -256,13 +257,7 @@ export default function MostrarPrestamos() {
                   >
                     Ver cuotas
                   </Button>
-                  <Button
-                      colorScheme="red"
-                      size="sm"
-                      onClick={() => handleEstado(prestamo.id, 'en legales')}
-                    >
-                      Pasar a legales
-                    </Button>
+                 
                 </HStack>
               </Stack>
             </AccordionPanel>

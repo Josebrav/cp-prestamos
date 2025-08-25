@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FormControl,
   FormLabel,
@@ -14,11 +14,12 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom'; // 👈 importar
+import { useNavigate } from 'react-router-dom';
 
 const PrestamoForm = () => {
   const [monto, setMonto] = useState('');
-  const [fecha, setFecha] = useState('');
+  const hoy = new Date().toISOString().split("T")[0];
+  const [fecha, setFecha] = useState(hoy);
   const [cuotas, setCuotas] = useState('');
   const [tipoTasa, setTipoTasa] = useState('normal');
   const [dni, setDni] = useState('');
@@ -26,7 +27,25 @@ const PrestamoForm = () => {
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [usuarioEncontrado, setUsuarioEncontrado] = useState(false);
 
-  const navigate = useNavigate(); // 👈 hook para redirigir
+  const [tasas, setTasas] = useState({}); // 👈 guardamos tasas desde backend
+  const navigate = useNavigate();
+
+  // 🔹 Obtener tasas al cargar
+  useEffect(() => {
+    const fetchTasas = async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/tasa"); // 👈 endpoint para traer todas las tasas
+        const tasasObj = {};
+        res.data.forEach(t => {
+          tasasObj[t.tipo] = parseFloat(t.tasaAnual);
+        });
+        setTasas(tasasObj);
+      } catch (error) {
+        console.error("Error cargando tasas:", error);
+      }
+    };
+    fetchTasas();
+  }, []);
 
   const buscarUsuarioPorDni = async () => {
     try {
@@ -76,11 +95,7 @@ const PrestamoForm = () => {
         text: `El préstamo fue creado correctamente para el usuario: ${nombreUsuario}`,
       });
 
-      // 👇 Redirige a ver los préstamos del usuario
       navigate(`/verprestamos/${userId}`);
-      // Si prefieres hardcodear el host (no necesario):
-      // window.location.href = `http://localhost:5173/verprestamos/${userId}`;
-
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -90,58 +105,54 @@ const PrestamoForm = () => {
     }
   };
 
-  // dentro de PrestamoForm
-const simularPrestamo = () => {
-  if (!monto || !fecha || !cuotas) {
+  // 🔹 Simulación con la nueva fórmula
+  const simularPrestamo = () => {
+    if (!monto || !fecha || !cuotas || !tasas[tipoTasa]) {
+      Swal.fire({
+        icon: "warning",
+        title: "Datos incompletos",
+        text: "Debe ingresar monto, fecha, cuotas y tener las tasas cargadas."
+      });
+      return;
+    }
+
+    const tasaAnual = tasas[tipoTasa];
+    const interesCalculado = (tasaAnual / 365) * (parseInt(cuotas) * 30);
+    const montoFinal = parseFloat(monto) * (1 + interesCalculado / 100);
+    const montoPorCuota = montoFinal / parseInt(cuotas);
+
+    const cuotasSimuladas = [];
+    for (let i = 0; i < parseInt(cuotas); i++) {
+      const vencimiento = new Date(fecha);
+      vencimiento.setMonth(vencimiento.getMonth() + i + 1);
+
+      cuotasSimuladas.push({
+        numeroCuota: i + 1,
+        fechaVencimiento: vencimiento.toISOString().split("T")[0],
+        monto: montoPorCuota.toFixed(2),
+      });
+    }
+
+    let detalleCuotas = cuotasSimuladas
+      .map(
+        (c) =>
+          `Cuota ${c.numeroCuota}: $${c.monto} (Vence: ${c.fechaVencimiento})`
+      )
+      .join("<br/>");
+
     Swal.fire({
-      icon: "warning",
-      title: "Datos incompletos",
-      text: "Debe ingresar monto, fecha y cantidad de cuotas para simular."
+      icon: "info",
+      title: "Simulación de Préstamo",
+      html: `
+        <b>Monto solicitado:</b> $${monto}<br/>
+        <b>Tasa anual:</b> ${tasaAnual}%<br/>
+        <b>Monto final :</b> $${montoFinal.toFixed(2)}<br/>
+        <b>Cantidad de cuotas:</b> ${cuotas}<br/><br/>
+        ${detalleCuotas}
+      `,
+      width: 600
     });
-    return;
-  }
-
-  // 1) Calcular monto final con el 15% por cuota
-  const porcentajeExtra = 0.15 * parseInt(cuotas);
-  const montoFinal = parseFloat(monto) * (1 + porcentajeExtra);
-
-  // 2) Calcular monto por cuota
-  const montoPorCuota = montoFinal / parseInt(cuotas);
-
-  // 3) Generar cuotas simuladas con fechas de vencimiento
-  const cuotasSimuladas = [];
-  for (let i = 0; i < parseInt(cuotas); i++) {
-    const vencimiento = new Date(fecha);
-    vencimiento.setMonth(vencimiento.getMonth() + i + 1);
-
-    cuotasSimuladas.push({
-      numeroCuota: i + 1,
-      fechaVencimiento: vencimiento.toISOString().split("T")[0],
-      monto: montoPorCuota.toFixed(2),
-    });
-  }
-
-  // 4) Mostrar resultado en modal
-  let detalleCuotas = cuotasSimuladas
-    .map(
-      (c) =>
-        `Cuota ${c.numeroCuota}: $${c.monto} (Vence: ${c.fechaVencimiento})`
-    )
-    .join("<br/>");
-
-  Swal.fire({
-    icon: "info",
-    title: "Simulación de Préstamo",
-    html: `
-      <b>Monto solicitado:</b> $${monto}<br/>
-      <b>Monto final :</b> $${montoFinal.toFixed(2)}<br/>
-      <b>Cantidad de cuotas:</b> ${cuotas}<br/><br/>
-      ${detalleCuotas}
-    `,
-    width: 600
-  });
-};
-
+  };
 
   return (
     <Box maxW="md" mx="auto" mt={10} p={6} borderWidth="1px" borderRadius="xl" boxShadow="lg">
@@ -200,13 +211,9 @@ const simularPrestamo = () => {
           <Button type="submit" colorScheme="teal" w="full" isDisabled={!usuarioEncontrado}>
             Enviar solicitud
           </Button>
-          <Button
-  colorScheme="purple"
-  w="full"
-  onClick={simularPrestamo}
->
-  Simular préstamo
-</Button>
+          <Button colorScheme="purple" w="full" onClick={simularPrestamo}>
+            Simular préstamo
+          </Button>
         </Stack>
       </form>
     </Box>

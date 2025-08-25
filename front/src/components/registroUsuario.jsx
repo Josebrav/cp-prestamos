@@ -20,6 +20,8 @@ const RegistroUsuario = () => {
     email: "",
     phone: "",
     dni: "",
+    cuil: "",
+    direccion: "",
     sueldo: "",
     lugarDeTrabajo: "",
     veraz: "",
@@ -28,7 +30,7 @@ const RegistroUsuario = () => {
   });
 
   const toast = useToast();
-   const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
@@ -63,6 +65,8 @@ const RegistroUsuario = () => {
         email: "",
         phone: "",
         dni: "",
+        cuil: "",
+        direccion: "",
         sueldo: "",
         lugarDeTrabajo: "",
         veraz: "",
@@ -71,7 +75,7 @@ const RegistroUsuario = () => {
       });
 
       setTimeout(() => {
-        navigate("/"); // 👈 acá poné la ruta de inicio
+        navigate("/"); // Cambiar a la ruta de inicio deseada
       }, 1000);
     } catch (error) {
       toast({
@@ -85,7 +89,7 @@ const RegistroUsuario = () => {
   };
 
   return (
-   <Flex justify="center" align="center" minH="100vh" bg="gray.50" ml={"10%"} mr={"10%"}>
+    <Flex justify="center" align="center" minH="100vh" bg="gray.50" ml={"10%"} mr={"10%"}>
       <Box
         bg="white"
         p={8}
@@ -100,7 +104,7 @@ const RegistroUsuario = () => {
           Registro de Usuario
         </Heading>
         <form onSubmit={handleSubmit}>
-             <VStack spacing={4} align="stretch">
+          <VStack spacing={4} align="stretch">
             <FormControl isRequired>
               <FormLabel>Nombre</FormLabel>
               <Input name="name" value={formData.name} onChange={handleChange} />
@@ -121,6 +125,17 @@ const RegistroUsuario = () => {
               <FormLabel>DNI</FormLabel>
               <Input name="dni" value={formData.dni} onChange={handleChange} />
             </FormControl>
+
+            {/* NUEVOS CAMPOS */}
+            <FormControl>
+              <FormLabel>CUIL</FormLabel>
+              <Input name="cuil" value={formData.cuil} onChange={handleChange} />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Dirección</FormLabel>
+              <Input name="direccion" value={formData.direccion} onChange={handleChange} />
+            </FormControl>
+
             <FormControl>
               <FormLabel>Sueldo</FormLabel>
               <Input name="sueldo" value={formData.sueldo} onChange={handleChange} />

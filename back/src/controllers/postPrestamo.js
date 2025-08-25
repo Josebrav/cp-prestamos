@@ -15,16 +15,17 @@ const postPrestamo = async (prestamoData) => {
     throw new Error("Faltan campos obligatorios");
   }
 
+  // Buscar tasa configurada
   const config = await TasaConfig.findByPk(tipoTasa);
   if (!config) {
     throw new Error("Tipo de tasa no configurado");
   }
 
-  const tasaMoraAnual = config.tasaAnual;
+  const tasaAnual = parseFloat(config.tasaAnual);
 
-  // Calcular monto final: monto + 15% * numero de cuotas
-  const porcentajeExtra = 0.15 * cuotas; // 15% por cuota
-  const montoFinalCalculado = parseFloat(monto) * (1 + porcentajeExtra);
+  // ✅ Nuevo cálculo: interés proporcional según días de cuotas
+  const interesCalculado = (tasaAnual / 365) * (cuotas * 30); // % total
+  const montoFinalCalculado = parseFloat(monto) * (1 + interesCalculado / 100);
 
   // 🔹 Calcular numeroControl (incremental por usuario)
   const ultimoPrestamo = await Prestamo.findOne({
@@ -33,25 +34,25 @@ const postPrestamo = async (prestamoData) => {
   });
   const numeroControl = ultimoPrestamo ? ultimoPrestamo.numeroControl + 1 : 1;
 
-  // Crear el préstamo con montoFinal y numeroControl
+  // Crear el préstamo
   const newPrestamo = await Prestamo.create({
     userId,
-    numeroControl,           // <-- asignado
+    numeroControl,
     fechaInicio,
     monto,
     tipoTasa,
-    tasaMoraAnual,
+    tasaMoraAnual: tasaAnual,
     cuotas,
     montoFinal: montoFinalCalculado.toFixed(2),
     estado: estado || 'pendiente',
   });
 
-  // Crear cuotas con monto dividido en partes iguales según montoFinal calculado
+  // Crear cuotas con monto dividido en partes iguales
   await createCuotas({
     prestamoId: newPrestamo.id,
     fechaInicio,
     montoBase: montoFinalCalculado,
-    cantidadCuotas: cuotas
+    cantidadCuotas: cuotas,
   });
 
   return newPrestamo;

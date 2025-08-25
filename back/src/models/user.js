@@ -53,6 +53,14 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    direccion:{
+      type:DataTypes.STRING,
+      allowNull:true
+    },
+    cuil:{
+      type: DataTypes.STRING,
+      allowNull:true
+    }
   }, {
     timestamps: false
   });

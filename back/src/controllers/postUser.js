@@ -1,14 +1,13 @@
 const { User } = require("../database")
 //const sendMailHandler = require('../../utils/mailing/sendMailHandler');
 
-const postUser = async ( name, surname, email, phone, dni, image, sueldo, lugarDeTrabajo,veraz,situacion,nacimiento ) => {
+const postUser = async ( name, surname, email, phone, dni, image, sueldo, lugarDeTrabajo,veraz,situacion,nacimiento,cuil,direccion ) => {
     try {
      
         const [newUser, created] = await User.findOrCreate({
             where: { dni },
             defaults: {
-                name, surname, email, phone, dni, image,sueldo,lugarDeTrabajo,veraz,situacion,nacimiento/* , 
-                driverId */
+                name, surname, email, phone, dni, image,sueldo,lugarDeTrabajo,veraz,situacion,nacimiento,cuil,direccion
             }
           });
         

@@ -7,7 +7,7 @@ const getPrestamosByEstado = async (estado) => {
   }
 
   // Verifica que el estado sea válido
-  const estadosValidos = ['pendiente', 'finalizado', 'vencido', 'cancelado', 'al dia'];
+  const estadosValidos = ['pendiente', 'finalizado', 'vencido', 'cancelado', 'al dia', 'en legales'];
   if (!estadosValidos.includes(estado)) {
     throw new Error(`Estado inválido: ${estado}`);
   }

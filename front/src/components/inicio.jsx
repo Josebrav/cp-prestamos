@@ -101,8 +101,11 @@ export default function Inicio() {
           <Button colorScheme="green" w="60%" onClick={() => navigate('/registrar-cuota')}>
             Registrar Cuota
           </Button>
-          <Button colorScheme="green" w="60%" onClick={() => navigate('/editar-tasas')}>
-            Editar Tasas
+          <Button colorScheme="green" w="60%" onClick={() => navigate('/administracion')}>
+            Administración
+          </Button>
+          <Button colorScheme="green" w="60%" onClick={() => navigate('/reportes')}>
+            Reportes
           </Button>
         </Stack>
       )}

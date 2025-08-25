@@ -21,6 +21,7 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function Personas() {
   const [users, setUsers] = useState([]);
@@ -29,6 +30,7 @@ export default function Personas() {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const navigate = useNavigate(); // 👈 agrega esto
 
   useEffect(() => {
     axios.get('http://localhost:3001/usuarios')
@@ -38,6 +40,7 @@ export default function Personas() {
       })
       .catch(err => console.error("❌ Error al obtener usuarios:", err));
   }, []);
+  
 
   const mostrarModal = (userId) => {
     const user = users.find(u => u.id === userId);
@@ -48,6 +51,10 @@ export default function Personas() {
       onOpen();
     }
   };
+    const irAPrestamos = (id) => {
+    navigate(`/verprestamos/${id}`); // 👈 redirige al detalle de préstamos
+  };
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -118,7 +125,11 @@ export default function Personas() {
                 </Text>
               </Td>
               <Td>{user.dni}</Td>
-              <Td color={user.Prestamos?.length > 0 ? 'blue.500' : 'black'}>
+             <Td
+                cursor={user.Prestamos?.length > 0 ? "pointer" : "default"}
+                color={user.Prestamos?.length > 0 ? "blue.500" : "black"}
+                onClick={() => user.Prestamos?.length > 0 && irAPrestamos(user.id)} // 👈 vuelve el click
+              >
                 {user.Prestamos?.length > 0
                   ? `Ver préstamos (${user.Prestamos.length})`
                   : "0"}
@@ -256,6 +267,29 @@ export default function Personas() {
               onChange={handleChange}
             />
           </Box>
+          {/* CUIL */}
+<Box>
+  <Text fontWeight="bold">CUIL:</Text>
+  <Input
+    name="cuil"
+    value={formData.cuil || ""}
+    placeholder="CUIL"
+    isReadOnly={!editMode}
+    onChange={handleChange}
+  />
+</Box>
+
+{/* Dirección */}
+<Box>
+  <Text fontWeight="bold">Dirección:</Text>
+  <Input
+    name="direccion"
+    value={formData.direccion || ""}
+    placeholder="Dirección"
+    isReadOnly={!editMode}
+    onChange={handleChange}
+  />
+</Box>
 
           {/* Préstamos */}
           <Box>
@@ -286,3 +320,4 @@ export default function Personas() {
     </Box>
   );
 }
+  
