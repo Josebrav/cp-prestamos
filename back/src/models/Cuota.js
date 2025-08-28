@@ -15,6 +15,10 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+      numeroControl: {             // <-- Nuevo campo
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
     fechaVencimiento: {
       type: DataTypes.DATEONLY,
       allowNull: false,
@@ -31,7 +35,22 @@ module.exports = (sequelize) => {
     estado: {
       type: DataTypes.ENUM('al dia', 'vencida', 'pagada'),
       defaultValue: 'al dia',
-    }
+    },
+    fechaPago: {
+  type: DataTypes.DATEONLY,
+  allowNull: true,
+  defaultValue: null,
+},
+interesPagado: {
+  type: DataTypes.DECIMAL(10,2),
+  allowNull: true,
+  defaultValue: 0,
+},
+montoPagado: {    // <-- Nuevo campo
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: null,
+    },
   }, {
     timestamps: true,
   });

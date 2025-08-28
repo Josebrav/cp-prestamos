@@ -2,8 +2,10 @@ const { Prestamo, Cuota } = require('../database');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 
+
+
 const calcularInteres = (prestamo, { graceDays = 0 } = {}) => {
-  const hoy = dayjs().startOf('day');
+  const hoy = dayjs().startOf("day");
   let interesTotal = 0;
 
   if (!prestamo.cuotas || !Array.isArray(prestamo.cuotas)) {
@@ -11,40 +13,50 @@ const calcularInteres = (prestamo, { graceDays = 0 } = {}) => {
   }
 
   for (const cuota of prestamo.cuotas) {
-    // Si está pagada, no genera interés
-    if (cuota.estado === 'pagada') {
-      cuota.montoConInteres = parseFloat(cuota.monto) || 0;
+    const montoOriginal = parseFloat(cuota.monto) || 0;
+    const montoPagado = parseFloat(cuota.montoPagado) || 0;
+    let saldoPendiente = montoOriginal - montoPagado;
+
+    // 🔹 Si la cuota ya está pagada o saldo = 0, no genera deuda
+    if (cuota.estado === "pagada" || saldoPendiente <= 0) {
+      cuota.montoConInteres = 0;
+      cuota.estado = "pagada";
       continue;
     }
 
-    const vencimiento = dayjs(cuota.fechaVencimiento).startOf('day');
-    let diasDesdeVencimiento = hoy.diff(vencimiento, 'day');
-
-    // Si aún no venció o está dentro del período de gracia, no suma interés
+    // 🔹 Si todavía no venció o está en período de gracia
+    const vencimiento = dayjs(cuota.fechaVencimiento).startOf("day");
+    let diasDesdeVencimiento = hoy.diff(vencimiento, "day");
     if (diasDesdeVencimiento <= graceDays) {
-      cuota.montoConInteres = parseFloat(cuota.monto) || 0;
+      cuota.montoConInteres = saldoPendiente;
       continue;
     }
 
-    const monto = parseFloat(cuota.monto);
+    // 🔹 Calcular intereses sobre el saldo pendiente
     const tasaAnual = parseFloat(prestamo.tasaMoraAnual);
-
-    if (isNaN(monto) || isNaN(tasaAnual)) {
-      cuota.montoConInteres = monto || 0;
+    if (isNaN(tasaAnual)) {
+      cuota.montoConInteres = saldoPendiente;
       continue;
     }
 
-    // Interés simple diario desde que vence (descontando los días de gracia)
-    const dias = diasDesdeVencimiento - graceDays; // si graceDays = 0, arranca día 1
+    const dias = diasDesdeVencimiento - graceDays;
     const tasaDiaria = tasaAnual / 100 / 365;
-    const interes = monto * tasaDiaria * dias;
+    const interes = saldoPendiente * tasaDiaria * dias;
 
     interesTotal += interes;
-    cuota.montoConInteres = Number((monto + interes).toFixed(2));
+    cuota.montoConInteres = Number((saldoPendiente + interes).toFixed(2));
+
+    // 🔹 Marcar como vencida si pasó la fecha y no está pagada
+    if (saldoPendiente > 0 && diasDesdeVencimiento > 0) {
+      cuota.estado = "vencida";
+    }
   }
 
   return Number(interesTotal.toFixed(2));
 };
+
+module.exports = { calcularInteres };
+
 
 const actualizarPrestamosVencidos = async () => {
   const hoy = dayjs().startOf('day');

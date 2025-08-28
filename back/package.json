@@ -11,13 +11,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "body": "^5.1.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
+    "parser": "^0.1.4",
     "pg": "^8.16.3",
     "sequelize": "^6.37.7"
   },
