@@ -89,17 +89,19 @@ const RegistroUsuario = () => {
   };
 
   return (
-    <Flex justify="center" align="center" minH="100vh" bg="gray.50" ml={"10%"} mr={"10%"}>
-      <Box
-        bg="white"
-        p={8}
-        borderRadius="lg"
-        shadow="md"
-        border="1px"
-        borderColor="gray.300"
-        maxW="500px"
-        w="full"
-      >
+   <Flex justify="center" align="center" minH="100vh"  >
+  <Box
+    bg="white"
+    p={8}
+    borderRadius="lg"
+    borderTopRadius={0}
+    shadow="md"
+    border="1px"
+    borderColor="gray.300"
+    w="80%"        // mismo ancho que header e inicio
+    maxW="1200px"
+    mx="auto"      // centra horizontalmente
+  >
         <Heading mb={6} textAlign="center" color="teal.500">
           Registro de Usuario
         </Heading>

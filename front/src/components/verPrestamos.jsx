@@ -22,8 +22,11 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
-import { FiPrinter } from "react-icons/fi";
+import { FiPrinter, FiSearch } from "react-icons/fi";
 import { IconButton } from "@chakra-ui/react";
+import Contrato from "./contrato";
+import logo from '../assets/cp.jpg'
+
 
 
 // ...
@@ -38,6 +41,7 @@ export default function VerPrestamos() {
   const [loadingCliente, setLoadingCliente] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
+    const [prestamoSeleccionado, setPrestamoSeleccionado] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -200,33 +204,25 @@ export default function VerPrestamos() {
           {prestamos.length === 0 ? (
             <Text textAlign="center">Este cliente no tiene préstamos registrados.</Text>
           ) : (
-            <Accordion allowMultiple>
-              {prestamos
-                .slice()
-                .sort((a, b) => (b.numeroControl || 0) - (a.numeroControl || 0))
-                .map((prestamo) => (
-                  <AccordionItem
-                    key={prestamo.id}
-                    border="1px solid"
-                    borderColor="gray.200"
-                    borderRadius="md"
-                    mb={4}
-                  >
-                    <h2>
-                      <AccordionButton _expanded={{ bg: "blue.50" }}>
-                        <Box flex="1" textAlign="left">
-                          <Text fontWeight="bold">
-                            Préstamo #{prestamo.numeroControl || prestamo.id}
-                          </Text>
-                          <Text>Monto: ${prestamo.monto}</Text>
-                          <Text>Cuotas: {renderInfoCuotas(prestamo.cuotas)}</Text>
-                          <Text>Monto pendiente: ${calcularMontoPendiente(prestamo.cuotas)}</Text>
-                          <Text>Estado: {prestamo.estado}</Text>
-                          <Text>Monto final: {prestamo.montoFinal ?? "-"}</Text>
-                        </Box>
-                        <AccordionIcon />
-                      </AccordionButton>
-                    </h2>
+           <Accordion allowMultiple>
+  {prestamos
+    .slice()
+    .sort((a, b) => (b.numeroControl || 0) - (a.numeroControl || 0))
+    .map((prestamo) => (
+      <AccordionItem key={prestamo.id} border="1px solid" borderColor="gray.200" borderRadius="md" mb={4}>
+        <h2>
+          <AccordionButton _expanded={{ bg: "blue.50" }}>
+            <Box flex="1" textAlign="left">
+              <Text fontWeight="bold">Préstamo #{prestamo.numeroControl || prestamo.id}</Text>
+              <Text>Monto: ${prestamo.monto}</Text>
+              <Text>Cuotas: {renderInfoCuotas(prestamo.cuotas)}</Text>
+              <Text>Monto pendiente: ${calcularMontoPendiente(prestamo.cuotas)}</Text>
+              <Text>Estado: {prestamo.estado}</Text>
+              <Text>Monto final: {prestamo.montoFinal ?? "-"}</Text>
+            </Box>
+            <AccordionIcon />
+          </AccordionButton>
+        </h2>
                     <AccordionPanel pb={4}>
                       <Box mt={2} display="flex" gap={2} flexWrap="wrap">
                         {prestamo.estado === "pendiente" && (
@@ -266,6 +262,13 @@ export default function VerPrestamos() {
                               </Button>
                             </>
                           )}
+                <Button
+  size="sm"
+  colorScheme="purple"
+  onClick={() => navigate(`/contrato/${prestamo.id}`)}
+>
+  Ver Contrato
+</Button>
                       </Box>
 
                       <Divider my={4} />
@@ -293,6 +296,27 @@ export default function VerPrestamos() {
                               <Td color={cuota.estado === "vencida" ? "red.500" : "inherit"}>
                                 {cuota.estado}
                               </Td>
+                              {cuota.estado === "pagada" && (
+  <IconButton
+    aria-label="Ver detalles de pago"
+    icon={<FiSearch />}
+    size="sm"
+    colorScheme="teal"
+    variant="outline"
+    onClick={() =>
+      Swal.fire({
+        title: `Cuota #${cuota.numeroCuota}`,
+        html: `
+          <p><b>Fecha de pago:</b> ${new Date(cuota.fechaPago).toLocaleDateString()}</p>
+          <p><b>Monto:</b> $${cuota.monto}</p>
+          <p><b>Interés pagado:</b> $${cuota.interesPagado}</p>
+        `,
+        icon: "info",
+      })
+    }
+  />
+)}
+
                               <Td>
                                 <IconButton
                                   aria-label="Imprimir cuota"
@@ -312,6 +336,7 @@ export default function VerPrestamos() {
                 ))}
             </Accordion>
           )}
+    
         </Box>
       </Box>
     </Box>

@@ -20,10 +20,11 @@ import RestanteFuturo from './components/restanteFuturo';
 import ReporteSGP from './components/resumen';
 import TotalAcumulado from './components/totalAcumulado';
 import VerCuota from './components/verCuota';
+import Contrato from './components/contrato';
 
 function App() {
   const location = useLocation();
-  const hideHeader = location.pathname.startsWith("/cuota/");
+  const hideHeader = location.pathname.startsWith("/cuota/") || location.pathname.startsWith("/contrato/");
 
   return (
     <Flex
@@ -60,6 +61,7 @@ function App() {
               <Route path="/reportes/resumen" element={<ReporteSGP />} />
               <Route path="/reportes/totalacumulado" element={<TotalAcumulado />} />
               <Route path="/cuota/:id" element={<VerCuota />} />
+              <Route path="/contrato/:id" element={<Contrato />} />
               <Route
                 path="*"
                 element={<h1 style={{ padding: '2rem' }}>Ruta no encontrada</h1>}
