@@ -217,7 +217,7 @@ const cuotaPagada = cuota?.estado === "pagada";
   
 
   return (
-    <Box>
+    <Box >
       {/* Panel superior (no imprimible) */}
       {!(montoMenor > 10 && displayAmount > montoMenor) && (
   <Flex
@@ -271,7 +271,7 @@ const cuotaPagada = cuota?.estado === "pagada";
 )}
 
       {/* Boletas duplicadas */}
-      <Box w="100%" maxW="100%" className="screen-preview">
+      <Box w="100%" maxW="100%" className="screen-preview" >
         {[0, 1].map((i) => (
           <Box
             key={i}
@@ -281,21 +281,21 @@ const cuotaPagada = cuota?.estado === "pagada";
             w="100%"
             height="47%"
           >
-            <Image
+         {/*    <Image
               src={recibo}
               alt="Recibo"
               width="700px"
               height="350px"
               className="no-print"
               zIndex={0}
-            />
+            /> */}
 
-            <Box position="absolute" top="0" left="0" w="100%" h="100%">
+            <Box position="absolute" top="0" left="0" w="100%" h="100%" bgColor={"white"}>
               <Text position="absolute" top="19px" right="31px" fontWeight="bold">
                 {fechaString}
               </Text>
               <Text position="absolute" top="44px" right="38px" fontWeight="bold">
-                N° Control: {prestamo.numeroControl}
+                N° Control: {cuota.numeroControl}
               </Text>
               <Text position="absolute" top="70px" left="170px" fontWeight="bold">
                 {cuota.numeroCuota}/{prestamo?.cuotas?.length ?? "-"}
@@ -323,18 +323,19 @@ const cuotaPagada = cuota?.estado === "pagada";
         {/* Botones solo para pantalla */}
         <Box
           className="no-print"
-          position="absolute"
+          position="relative"
           bottom="40px"
           left="150px"
           display="flex"
           gap={3}
+          m={"370px"}
         >
          {!cuotaPagada && (
-  <Button colorScheme="green" onClick={handlePago}>
+  <Button colorScheme="green" onClick={handlePago} >
     Registrar Pago
   </Button>
 )}
-          <Button colorScheme="blue" onClick={() => window.print()}>
+          <Button colorScheme="blue" onClick={() => window.print() }>
             Imprimir
           </Button>
         </Box>
