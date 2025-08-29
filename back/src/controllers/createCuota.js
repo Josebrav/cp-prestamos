@@ -13,19 +13,23 @@ const createCuotas = async ({ prestamoId, fechaInicio, montoBase, cantidadCuotas
   const ultimaCuota = await Cuota.findOne({
     order: [['numeroControl', 'DESC']]
   });
+
+  // Si no hay cuotas, arrancamos en 1
   let numeroControlBase = ultimaCuota ? ultimaCuota.numeroControl + 1 : 1;
 
   const cuotas = [];
 
   for (let i = 0; i < cantidadCuotas; i++) {
     // ✅ primera cuota vence 1 mes después
-    const vencimiento = dayjs(fechaInicio).add(i + 1, 'month').format('YYYY-MM-DD');
+    const vencimiento = dayjs(fechaInicio)
+      .add(i + 1, 'month')
+      .format('YYYY-MM-DD');
 
     cuotas.push({
       prestamoId,
-      numeroCuota: i + 1,  // ejemplo: 3/6
+      numeroCuota: i + 1, // ej: "3/6"
       fechaVencimiento: vencimiento,
-      numeroControl: numeroControlBase + i,       // correlativo único por cuota
+      numeroControl: numeroControlBase + i, // correlativo único global
       monto: montoPorCuota.toFixed(2),
       estado: 'al dia'
     });

@@ -18,6 +18,7 @@ module.exports = (sequelize) => {
       numeroControl: {             // <-- Nuevo campo
         type: DataTypes.INTEGER,
         allowNull: false,
+        unique: true,
       },
     fechaVencimiento: {
       type: DataTypes.DATEONLY,
