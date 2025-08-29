@@ -36,25 +36,41 @@ export default function Contrato() {
 console.log(prestamoId);
 
   useEffect(() => {
-    if (prestamoId) {
-      axios
-        .get(`http://localhost:3001/prestamo/${prestamoId.id}`)
-        .then((res) => {
-            console.log(res.data);
-            
-          setPrestamo(res.data);
-          return axios.get(`http://localhost:3001/usuario/${res.data.userId}`);
-        })
-        .then((res) => {
-          setCliente(res.data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("❌ Error cargando contrato:", err);
-          setLoading(false);
-        });
-    }
-  }, [prestamoId]);
+  if (prestamoId) {
+    axios
+      .get(`http://localhost:3001/prestamo/${prestamoId.id}`)
+      .then((res) => {
+        const prestamoData = res.data;
+        setPrestamo(prestamoData);
+
+        // 🔹 Calcular fecha de la primera cuota desde la fecha de inicio
+        if (prestamoData.fechaInicio) {
+          const inicio = new Date(prestamoData.fechaInicio);
+          const primeraCuota = new Date(inicio);
+          primeraCuota.setMonth(primeraCuota.getMonth() + 1);
+
+          setFechaPrimeraCuota(
+            `${primeraCuota.getDate().toString().padStart(2, "0")}/${(
+              primeraCuota.getMonth() + 1
+            )
+              .toString()
+              .padStart(2, "0")}/${primeraCuota.getFullYear()}`
+          );
+        }
+
+        return axios.get(`http://localhost:3001/usuario/${prestamoData.userId}`);
+      })
+      .then((res) => {
+        setCliente(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("❌ Error cargando contrato:", err);
+        setLoading(false);
+      });
+  }
+}, [prestamoId]);
+
 
   if (loading) {
     return (

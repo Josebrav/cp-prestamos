@@ -48,7 +48,7 @@ function App() {
               <Route path="/" element={<Inicio />} />
               <Route path="/nuevo-prestamo" element={<Prestamos />} />
               <Route path="/administracion" element={<EditarTasas />} />
-              <Route path="/registrar-cuota" element={<RegistrarCuotas />} />
+               <Route path="/registrar-cuota" element={<RegistrarCuotas />} /> 
               <Route path="/verprestamos/:id" element={<VerPrestamos />} />
               <Route path="/registro-usuario" element={<RegistroUsuario />} />
               <Route path="/prestamos" element={<MostrarPrestamos />} />

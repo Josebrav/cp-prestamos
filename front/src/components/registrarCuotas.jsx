@@ -31,7 +31,8 @@ export default function RegistrarCuotas() {
 
   const montoAPagar = (cuota) => {
     const base = parseFloat(cuota.monto) || 0;
-    const conInteres = cuota.montoConInteres != null ? parseFloat(cuota.montoConInteres) : base;
+    const conInteres =
+      cuota.montoConInteres != null ? parseFloat(cuota.montoConInteres) : base;
     return Math.max(base, conInteres);
   };
 
@@ -65,9 +66,33 @@ export default function RegistrarCuotas() {
     }
   };
 
+  // 🔹 Función para crear fecha local desde YYYY-MM-DD (sin problemas de timezone)
+  const parseDateLocal = (fechaStr) => {
+    const [year, month, day] = fechaStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // 🔹 Calcular vencimiento de cuotas
+  const ajustarFecha = (fechaInicio, numeroCuota) => {
+    const inicio = parseDateLocal(fechaInicio);
+    const nueva = new Date(inicio);
+
+    // La primera cuota vence el mismo día que la fechaInicio
+    nueva.setMonth(inicio.getMonth() + (numeroCuota - 1));
+
+    // si el mes no tiene ese día (ej: 31 → febrero 28/29)
+    if (nueva.getDate() < inicio.getDate()) {
+      nueva.setDate(0);
+    }
+
+    return nueva.toLocaleDateString("es-AR");
+  };
+
   const cambiarEstadoCuota = async (cuotaId, nuevoEstado) => {
     try {
-      await axios.put(`http://localhost:3001/cuotas/${cuotaId}/estado`, { estado: nuevoEstado });
+      await axios.put(`http://localhost:3001/cuotas/${cuotaId}/estado`, {
+        estado: nuevoEstado,
+      });
       setPrestamos((prev) =>
         prev.map((prestamo) => ({
           ...prestamo,
@@ -84,14 +109,13 @@ export default function RegistrarCuotas() {
 
   return (
     <Box
-      // Igual que el header
-      w="80%"           // o el mismo valor que uses en el Header
-      maxW="1200px"     // igual que Header
-      mx="auto"         // centrado
+      w="80%"
+      maxW="1200px"
+      mx="auto"
       bg="white"
       borderRadius="20px"
       borderTopRadius={"0px"}
-      mt={0}            // pegado al header
+      mt={0}
       p={6}
       pb={"140px"}
     >
@@ -121,7 +145,8 @@ export default function RegistrarCuotas() {
               <AccordionButton _expanded={{ bg: "blue.100" }}>
                 <Box flex="1" textAlign="left" fontWeight="bold">
                   Monto: ${formatMoney(prestamo.monto)} - Fecha Inicio:{" "}
-                  {new Date(prestamo.fechaInicio).toLocaleDateString()} - Estado: {prestamo.estado}
+                  {parseDateLocal(prestamo.fechaInicio).toLocaleDateString("es-AR")} - Estado:{" "}
+                  {prestamo.estado}
                 </Box>
                 <AccordionIcon />
               </AccordionButton>
@@ -138,25 +163,35 @@ export default function RegistrarCuotas() {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {prestamo.cuotas.map((cuota) => (
-                    <Tr key={cuota.id}>
-                      <Td>{cuota.numeroCuota}</Td>
-                      <Td>{new Date(cuota.fechaVencimiento).toLocaleDateString()}</Td>
-                      <Td>${formatMoney(montoAPagar(cuota))}</Td>
-                      <Td>{cuota.estado}</Td>
-                      <Td>
-                        {cuota.estado !== "pagada" && (
-                          <Button
-                            size="sm"
-                            colorScheme="green"
-                            onClick={() => cambiarEstadoCuota(cuota.id, "pagada")}
-                          >
-                            Marcar como pagada
-                          </Button>
-                        )}
-                      </Td>
-                    </Tr>
-                  ))}
+                  {prestamo.cuotas.map((cuota, index) => {
+                    const anterioresPagadas = prestamo.cuotas
+                      .slice(0, index)
+                      .every((c) => c.estado === "pagada");
+
+                    return (
+                      <Tr key={cuota.id}>
+                        <Td>{cuota.numeroCuota}</Td>
+                        <Td>
+                          {ajustarFecha(cuota.fechaVencimiento, cuota.numeroCuota)}
+                        </Td>
+                        <Td>${formatMoney(montoAPagar(cuota))}</Td>
+                        <Td>{cuota.estado}</Td>
+                        <Td>
+                          {cuota.estado !== "pagada" && anterioresPagadas && (
+                            <Button
+                              size="sm"
+                              colorScheme="green"
+                              onClick={() =>
+                                cambiarEstadoCuota(cuota.id, "pagada")
+                              }
+                            >
+                              Marcar como pagada
+                            </Button>
+                          )}
+                        </Td>
+                      </Tr>
+                    );
+                  })}
                 </Tbody>
               </Table>
             </AccordionPanel>

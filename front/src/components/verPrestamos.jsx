@@ -286,50 +286,81 @@ export default function VerPrestamos() {
                             <Th>Estado</Th>
                           </Tr>
                         </Thead>
-                        <Tbody>
-                          {prestamo.cuotas?.map((cuota) => (
-                            <Tr key={cuota.id}>
-                              <Td>{cuota.numeroCuota}</Td>
-                              <Td>{new Date(cuota.fechaVencimiento).toLocaleDateString()}</Td>
-                              <Td>${cuota.monto}</Td>
-                              <Td>${cuota.montoConInteres ?? "-"}</Td>
-                              <Td color={cuota.estado === "vencida" ? "red.500" : "inherit"}>
-                                {cuota.estado}
-                              </Td>
-                              {cuota.estado === "pagada" && (
-  <IconButton
-    aria-label="Ver detalles de pago"
-    icon={<FiSearch />}
-    size="sm"
-    colorScheme="teal"
-    variant="outline"
-    onClick={() =>
-      Swal.fire({
-        title: `Cuota #${cuota.numeroCuota}`,
-        html: `
-          <p><b>Fecha de pago:</b> ${new Date(cuota.fechaPago).toLocaleDateString()}</p>
-          <p><b>Monto:</b> $${cuota.monto}</p>
-          <p><b>Interés pagado:</b> $${cuota.interesPagado}</p>
-        `,
-        icon: "info",
-      })
-    }
-  />
-)}
+                      <Tbody>
+  {prestamo.cuotas
+    ?.slice()
+    .sort((a, b) => a.numeroCuota - b.numeroCuota)
+    .map((cuota, index, cuotasOrdenadas) => {
+      const cuotasAnterioresPagadas = cuotasOrdenadas
+        .slice(0, index)
+        .every((c) => c.estado === "pagada");
 
-                              <Td>
-                                <IconButton
-                                  aria-label="Imprimir cuota"
-                                  icon={<FiPrinter />}
-                                  size="sm"
-                                  colorScheme="blue"
-                                  variant="outline"
-                                  onClick={() => navigate(`/cuota/${cuota.id}`)} // 🔹 redirige a la previsualización
-                                />
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
+      // 🔹 Definir el monto a mostrar según el estado
+      let displayAmount;
+      if (cuota.estado === "pagada") {
+        // Si está pagada, mostrar lo que efectivamente se pagó
+        displayAmount =
+          cuota.montoPagado ??
+          cuota.montoConInteres ??
+          cuota.monto ??
+          0;
+      } else {
+        // Si no está pagada, mostrar el monto que corresponde pagar
+        displayAmount = cuota.montoConInteres ?? cuota.monto ?? 0;
+      }
+
+      return (
+        <Tr key={cuota.id}>
+          <Td>{cuota.numeroCuota}</Td>
+          <Td>{new Date(cuota.fechaVencimiento).toLocaleDateString()}</Td>
+          <Td colSpan={2}>${displayAmount}</Td>
+          <Td color={cuota.estado === "vencida" ? "red.500" : "inherit"}>
+            {cuota.estado}
+          </Td>
+
+          {cuota.estado === "pagada" && (
+            <IconButton
+              aria-label="Ver detalles de pago"
+              icon={<FiSearch />}
+              size="sm"
+              colorScheme="teal"
+              variant="outline"
+              onClick={() =>
+                Swal.fire({
+                  title: `Cuota #${cuota.numeroCuota}`,
+                  html: `
+                    <p><b>Fecha de pago:</b> ${new Date(
+                      cuota.fechaPago
+                    ).toLocaleDateString()}</p>
+                    <p><b>Monto pagado:</b> $${displayAmount}</p>
+                    <p><b>Interés pagado:</b> $${cuota.interesPagado ?? 0}</p>
+                  `,
+                  icon: "info",
+                })
+              }
+            />
+          )}
+
+          <Td>
+            {/* 🔹 Solo mostrar impresora si está pagada Y todas las anteriores también */}
+            {cuota.estado === "pagada" && cuotasAnterioresPagadas && (
+              <IconButton
+                aria-label="Imprimir cuota"
+                icon={<FiPrinter />}
+                size="sm"
+                colorScheme="blue"
+                variant="outline"
+                onClick={() => navigate(`/cuota/${cuota.id}`)}
+              />
+            )}
+          </Td>
+        </Tr>
+      );
+    })}
+</Tbody>
+
+
+
                       </Table>
                     </AccordionPanel>
                   </AccordionItem>

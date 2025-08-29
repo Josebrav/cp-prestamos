@@ -98,9 +98,9 @@ export default function Inicio() {
           <Button colorScheme="green" w="60%" onClick={() => navigate('/nuevo-prestamo')}>
             Nuevo Préstamo
           </Button>
-          <Button colorScheme="green" w="60%" onClick={() => navigate('/registrar-cuota')}>
+          {/* <Button colorScheme="green" w="60%" onClick={() => navigate('/registrar-cuota')}>
             Registrar Cuota
-          </Button>
+          </Button> */}
           <Button colorScheme="green" w="60%" onClick={() => navigate('/administracion')}>
             Administración
           </Button>
