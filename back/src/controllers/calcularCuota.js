@@ -111,11 +111,11 @@ const actualizarPrestamosVencidos = async () => {
       }
 
       // Actualizar montoFinal sumando cuotas con interés
-      const sumaMontosConInteres = prestamo.cuotas.reduce(
+     /*  const sumaMontosConInteres = prestamo.cuotas.reduce(
         (acc, c) => acc + parseFloat(c.montoConInteres || c.monto || 0),
         0
       );
-      prestamo.montoFinal = parseFloat(sumaMontosConInteres.toFixed(2));
+      prestamo.montoFinal = parseFloat(sumaMontosConInteres.toFixed(2)); */
 
       // Si todas las cuotas están pagadas, marcar préstamo como finalizado
       if (prestamo.cuotas.every((c) => c.estado === 'pagada')) {

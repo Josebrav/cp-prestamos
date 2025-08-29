@@ -22,7 +22,8 @@ conn.sync({ force: false }).then(async () => {
   //{ tipo: "tipo1", porcentaje: 10 },
   //{ tipo: "tipo2", porcentaje: 20 }
 //]);
-  server.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
+  server.listen(port, '0.0.0.0', () => {
+  console.log(`Server listening on port ${port}`);
+});
+
 }).catch(error => console.error(error));
