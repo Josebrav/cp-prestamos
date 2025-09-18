@@ -15,7 +15,7 @@ import axios from "axios";
 // import recibo from "../assets/recibo2.jpg";
 import { numeroALetras } from "../utils/numerosALetras";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.0.115:3001";
 
 export default function VerCuota() {
   const { id } = useParams();

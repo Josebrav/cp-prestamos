@@ -34,7 +34,7 @@ const PrestamoForm = () => {
   useEffect(() => {
     const fetchTasas = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/tasa"); // 👈 endpoint para traer todas las tasas
+        const res = await axios.get("http://192.168.0.115:3001/tasa"); // 👈 endpoint para traer todas las tasas
         const tasasObj = {};
         res.data.forEach(t => {
           tasasObj[t.tipo] = parseFloat(t.tasaAnual);
@@ -49,7 +49,7 @@ const PrestamoForm = () => {
 
   const buscarUsuarioPorDni = async () => {
     try {
-      const res = await axios.post('http://localhost:3001/buscar-dni', { dni });
+      const res = await axios.post('http://192.168.0.115:3001/buscar-dni', { dni });
       const user = res.data;
 
       setUserId(user.id);
@@ -87,7 +87,7 @@ const PrestamoForm = () => {
         tipoTasa,
       };
 
-      await axios.post('http://localhost:3001/newprestamo', prestamoData);
+      await axios.post('http://192.168.0.115:3001/newprestamo', prestamoData);
 
       await Swal.fire({
         icon: 'success',

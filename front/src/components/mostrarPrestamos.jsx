@@ -40,7 +40,7 @@ export default function MostrarPrestamos() {
 
   const fetchPrestamos = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3001/prestamos/todos');
+      const { data } = await axios.get('http://192.168.0.115:3001/prestamos/todos');
       setPrestamos(data);
     } catch (error) {
       console.error('Error al obtener préstamos:', error);
@@ -55,7 +55,7 @@ export default function MostrarPrestamos() {
 
   const handleEstado = async (id, nuevoEstado) => {
     try {
-      await axios.put(`http://localhost:3001/actualizarprestamo/${id}/estado`, {
+      await axios.put(`http://192.168.0.115:3001/actualizarprestamo/${id}/estado`, {
         estado: nuevoEstado,
       });
       Swal.fire('Actualizado', `Préstamo marcado como "${nuevoEstado}"`, 'success');

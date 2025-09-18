@@ -15,7 +15,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.0.115:3001";
 
 export default function ReporteCuotasVencidasMes() {
   const [sp] = useSearchParams();

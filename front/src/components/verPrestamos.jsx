@@ -65,7 +65,7 @@ export default function VerPrestamos() {
   const fetchCliente = () => {
     setLoadingCliente(true);
     axios
-      .get(`http://localhost:3001/usuario/${id}`)
+      .get(`http://192.168.0.115:3001/usuario/${id}`)
       .then((res) => {
         setCliente(res.data);
         setLoadingCliente(false);
@@ -82,7 +82,7 @@ export default function VerPrestamos() {
 
   const fetchPrestamos = () => {
     axios
-      .get(`http://localhost:3001/prestamos/usuario/${id}`)
+      .get(`http://192.168.0.115:3001/prestamos/usuario/${id}`)
       .then((res) => {
         setPrestamos(res.data);
         setLoading(false);
@@ -136,7 +136,7 @@ export default function VerPrestamos() {
 
   const handleAccionPrestamo = (prestamoId, nuevoEstado) => {
     axios
-      .put(`http://localhost:3001/actualizarprestamo/${prestamoId}/estado`, {
+      .put(`http://192.168.0.115:3001/actualizarprestamo/${prestamoId}/estado`, {
         estado: nuevoEstado,
       })
       .then(() => {

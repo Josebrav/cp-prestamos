@@ -43,7 +43,7 @@ const RegistroUsuario = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:3001/registro", {
+      const res = await fetch("http://192.168.0.115:3001/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

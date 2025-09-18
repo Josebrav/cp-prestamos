@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Box, Table, Thead, Tbody, Tr, Th, Td, Spinner, Heading, Text, VStack } from "@chakra-ui/react";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.0.115:3001";
 
 export default function ReporteSGP() {
     const [loading, setLoading] = useState(true);

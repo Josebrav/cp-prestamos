@@ -38,7 +38,7 @@ console.log(prestamoId);
   useEffect(() => {
   if (prestamoId) {
     axios
-      .get(`http://localhost:3001/prestamo/${prestamoId.id}`)
+      .get(`http://192.168.0.115:3001/prestamo/${prestamoId.id}`)
       .then((res) => {
         const prestamoData = res.data;
         setPrestamo(prestamoData);
@@ -58,7 +58,7 @@ console.log(prestamoId);
           );
         }
 
-        return axios.get(`http://localhost:3001/usuario/${prestamoData.userId}`);
+        return axios.get(`http://192.168.0.115:3001/usuario/${prestamoData.userId}`);
       })
       .then((res) => {
         setCliente(res.data);

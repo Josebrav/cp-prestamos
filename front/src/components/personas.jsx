@@ -33,7 +33,7 @@ export default function Personas() {
   const navigate = useNavigate(); // 👈 agrega esto
 
   useEffect(() => {
-    axios.get('http://localhost:3001/usuarios')
+    axios.get('http://192.168.0.115:3001/usuarios')
       .then(res => {
         const sorted = res.data.sort((a, b) => a.name.localeCompare(b.name));
         setUsers(sorted);
@@ -62,7 +62,7 @@ export default function Personas() {
 
   const handleUpdateUser = async () => {
     try {
-      const res = await axios.put(`http://localhost:3001/usuario/${selectedUser.id}`, formData);
+      const res = await axios.put(`http://192.168.0.115:3001/usuario/${selectedUser.id}`, formData);
       setSelectedUser(res.data.user); // actualiza modal
       // actualiza listado de usuarios
       setUsers(users.map(u => u.id === selectedUser.id ? res.data.user : u));

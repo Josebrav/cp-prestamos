@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = 'http://192.168.0.115:3001';
 
 export default function EditarTasas() {
   // Estado de tasas

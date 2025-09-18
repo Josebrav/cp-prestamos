@@ -14,7 +14,7 @@ import {
   Text
 } from "@chakra-ui/react";
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "http://192.168.0.115:3001";
 
 export default function TotalAcumulado() {
   const [data, setData] = useState([]);
