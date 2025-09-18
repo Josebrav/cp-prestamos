@@ -26,6 +26,24 @@ export default function EditarTasas() {
   // Pasar a legales
   const [numeroControl, setNumeroControl] = useState('');
 
+  // --- BORRAR PRÉSTAMO (ADMIN) ---
+const [numeroControlBorrar, setNumeroControlBorrar] = useState('');
+
+// Acción directa (como pasar a legales)
+const borrarPrestamoPorNumeroControl = async () => {
+  if (!numeroControlBorrar) return alert("Ingrese un número de control");
+  try {
+    await axios.delete(`${API_BASE}/prestamos/numero-control/${numeroControlBorrar}`);
+    alert(`Préstamo ${numeroControlBorrar} borrado correctamente`);
+    setNumeroControlBorrar('');
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo borrar el préstamo");
+  }
+};
+
+
+
   // Login simple
   const handleLogin = () => {
     if (username === 'anibal' && password === 'norma01') {
@@ -122,8 +140,26 @@ export default function EditarTasas() {
   // Si no está autenticado, mostrar login
   if (!isAuthenticated) {
     return (
-      <Box h="50vh" display="flex" justifyContent="center" alignItems="center" bg="gray.50" ml="10%" mr="10%">
-        <Box p={6} bg="white" rounded="md" shadow="md" width="300px">
+         <Box
+        w="80%"
+        maxW="1200px"
+        mx="auto"
+        
+        mb={6}
+        minH="50vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bgColor={"white"}
+      >
+        <Box
+          w={["100%", "420px"]}
+          bg="white"
+          rounded="lg"
+          shadow="md"
+         p={6}
+          borderWidth="1px"
+        >
           <VStack spacing={4}>
             <Text fontSize="xl" fontWeight="bold">Autenticación requerida</Text>
             <FormControl>
@@ -157,7 +193,20 @@ export default function EditarTasas() {
 
   // Componente principal autenticado
   return (
-    <Box w="80%" maxW="1200px" ml="10%" mr="10%" bg="white" borderRadius="20px" mt={0} p={6} pb="140px">
+    <Box
+      w="80%"
+      maxW="1200px"
+      mx="auto"
+    
+      mb={6}
+      bg="white"
+      borderRadius="lg"
+      boxShadow="md"
+      borderWidth="1px"
+       borderTopRadius={0}
+      p={[4, 6, 8]}   // padding responsive
+    >
+      
       <Box display="flex" justifyContent="center" alignItems="center" minH="60vh">
         <Box p={6} bg="white" rounded="md" shadow="md" width="700px">
           <VStack spacing={6} align="stretch">
@@ -221,6 +270,27 @@ export default function EditarTasas() {
               </FormControl>
               <Button mt={2} colorScheme="red" onClick={pasarALegales}>Pasar a legales</Button>
             </Box>
+
+{/* Borrar préstamo (Administración) */}
+<Box p={4} bg="red.50" rounded="md" shadow="sm" borderWidth="1px" borderColor="red.200">
+  <Text fontWeight="bold" mb={2} color="red.700">
+    Borrar préstamo (acción irreversible)
+  </Text>
+
+  <FormControl>
+    <FormLabel>Número de control</FormLabel>
+    <Input
+      type="text"
+      placeholder="Número de control"
+      value={numeroControlBorrar}
+      onChange={(e) => setNumeroControlBorrar(e.target.value)}
+    />
+  </FormControl>
+
+  <Button mt={3} colorScheme="red" onClick={borrarPrestamoPorNumeroControl}>
+    Borrar préstamo
+  </Button>
+</Box>
 
           </VStack>
         </Box>

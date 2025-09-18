@@ -9,6 +9,7 @@ import {
   FormLabel,
   Input,
   Select,
+  Stack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
@@ -40,12 +41,11 @@ export default function Reportes() {
       navigate(`/reportes/prestamos-mes?anio=${anio}&mes=${mes}`);
       return;
     }
-    // rutas futuras
     if (reporte === "totalCobrarMes") {
       navigate(`/reportes/total-mes?anio=${anio}&mes=${mes}`);
       return;
     }
-       if (reporte === "totalCobrarAcumulado") {
+    if (reporte === "totalCobrarAcumulado") {
       navigate(`/reportes/totalacumulado`);
       return;
     }
@@ -63,50 +63,87 @@ export default function Reportes() {
     }
   };
 
-  // Login
+  // ===== Login =====
   if (!isAuthenticated) {
     return (
       <Box
-        h="50vh"
+        w="80%"
+        maxW="1200px"
+        mx="auto"
+        
+        mb={6}
+        minH="50vh"
         display="flex"
-        justifyContent="center"
         alignItems="center"
-        bg="gray.50"
-        ml="10%"
-        mr="10%"
+        justifyContent="center"
+        bgColor={"white"}
       >
-        <Box p={6} backgroundColor="white" rounded="md" shadow="md" width="300px">
-          <VStack spacing={4}>
-            <Text fontSize="xl" fontWeight="bold">Autenticación requerida</Text>
+        <Box
+          w={["100%", "420px"]}
+          bg="white"
+          rounded="lg"
+          shadow="md"
+         p={6}
+          borderWidth="1px"
+        >
+          <VStack spacing={4} align="stretch">
+            <Text fontSize="xl" fontWeight="bold" textAlign="center">
+              Autenticación requerida
+            </Text>
+
             <FormControl>
               <FormLabel>Usuario</FormLabel>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} />
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Ingresa tu usuario"
+              />
             </FormControl>
+
             <FormControl>
               <FormLabel>Contraseña</FormLabel>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Ingresa tu contraseña"
+              />
             </FormControl>
-            {error && <Text color="red.500">{error}</Text>}
-            <Button colorScheme="teal" onClick={handleLogin}>Ingresar</Button>
+
+            {error && (
+              <Text color="red.500" fontSize="sm" textAlign="center">
+                {error}
+              </Text>
+            )}
+
+            <Button colorScheme="teal" onClick={handleLogin} w="full">
+              Ingresar
+            </Button>
           </VStack>
         </Box>
       </Box>
     );
   }
 
-  // Pantalla principal
+  // ===== Pantalla principal =====
   return (
     <Box
-      h="50vh"
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      bg="gray.50"
-      ml="10%"
-      mr="10%"
+      w="80%"
+      maxW="1200px"
+      mx="auto"
+    
+      mb={6}
+      bg="white"
+      borderRadius="lg"
+      boxShadow="md"
+      borderWidth="1px"
+       borderTopRadius={0}
+      p={[4, 6, 8]}   // padding responsive
     >
-      <VStack spacing={6} align="stretch" w="100%" p={"30%"}>
-        <Text fontSize="2xl" fontWeight="bold">Reportes</Text>
+      <VStack spacing={6} align="stretch">
+        <Text fontSize={["xl", "2xl"]} fontWeight="bold">
+          Reportes
+        </Text>
 
         <FormControl>
           <FormLabel>Seleccionar reporte</FormLabel>
@@ -125,23 +162,35 @@ export default function Reportes() {
         </FormControl>
 
         {(reporte === "prestamosMes" || reporte === "totalCobrarMes") && (
-          <Box display="flex" gap={4}>
+          <Stack direction={["column", "row"]} spacing={4}>
             <FormControl>
               <FormLabel>Año</FormLabel>
-              <Input type="number" value={anio} onChange={(e) => setAnio(e.target.value)} />
+              <Input
+                type="number"
+                value={anio}
+                onChange={(e) => setAnio(e.target.value)}
+                placeholder="Ej: 2025"
+              />
             </FormControl>
+
             <FormControl>
               <FormLabel>Mes</FormLabel>
               <Select value={mes} onChange={(e) => setMes(e.target.value)}>
                 {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
                 ))}
               </Select>
             </FormControl>
-          </Box>
+          </Stack>
         )}
 
-        <Button colorScheme="teal" onClick={irAlReporte}>
+        <Button
+          colorScheme="teal"
+          onClick={irAlReporte}
+          alignSelf={["stretch", "flex-start"]}
+        >
           Generar Reporte
         </Button>
       </VStack>

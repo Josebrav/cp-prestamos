@@ -65,26 +65,7 @@ export default function MostrarPrestamos() {
     }
   };
 
-  const handleBorrar = async (id) => {
-    const confirm = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: 'Esta acción no se puede deshacer',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, borrar',
-    });
-
-    if (confirm.isConfirmed) {
-      try {
-        await axios.delete(`http://localhost:3001/borrar/${id}`);
-        Swal.fire('Borrado', 'Préstamo eliminado correctamente', 'success');
-        fetchPrestamos();
-      } catch (error) {
-        Swal.fire('Error', 'No se pudo borrar el préstamo', 'error');
-      }
-    }
-  };
-
+ 
   const handleVerCuotas = (id) => {
     const prestamo = prestamos.find((p) => p.id === id);
     setCuotas(prestamo.cuotas || []);
@@ -242,14 +223,7 @@ export default function MostrarPrestamos() {
                       Aprobar
                     </Button>
                   )}
-                  <Button
-                    colorScheme="gray"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBorrar(prestamo.id)}
-                  >
-                    Borrar
-                  </Button>
+                 
                   <Button
                     colorScheme="blue"
                     size="sm"

@@ -4,75 +4,100 @@ import {
   Text,
   Input,
   Button,
-  Image,
   Select,
   Spinner,
   Flex,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import recibo from "../assets/recibo2.jpg";
+// import Image from "@chakra-ui/react"; // si usás <Image />, importalo
+// import recibo from "../assets/recibo2.jpg";
 import { numeroALetras } from "../utils/numerosALetras";
+
+const API_BASE = "http://localhost:3001";
 
 export default function VerCuota() {
   const { id } = useParams();
+
+  // ----- Estados principales -----
   const [cuota, setCuota] = useState(null);
   const [quitas, setQuitas] = useState([]);
   const [quitaSeleccionada, setQuitaSeleccionada] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Input que escribe el usuario (string para no romper mientras escribe)
-  const [montoRecibido, setMontoRecibido] = useState("");
+  // nControl global
+  const [nControlActual, setNControlActual] = useState(null);
+  const [nControlSiguiente, setNControlSiguiente] = useState(null);
+  const [loadingNControl, setLoadingNControl] = useState(true);
 
-  // Monto calculado por la app (numero)
+  // Input y cálculos de monto
+  const [montoRecibido, setMontoRecibido] = useState(""); // string para no romper mientras escribe
   const [montoCalculado, setMontoCalculado] = useState(0);
   const [montoEnLetras, setMontoEnLetras] = useState("");
 
-  
-
-  // helper seguro para parsear números (acepta "123,45" y "123.45")
+  // helper: parsear números (acepta "123,45" y "123.45")
   const val = (x) => {
     if (x === null || x === undefined || x === "") return 0;
     const n = Number(String(x).replace(",", "."));
     return Number.isFinite(n) ? n : 0;
   };
 
+  // ----- Fetch cuota + quitas -----
   useEffect(() => {
     setLoading(true);
-    axios
-      .get(`http://localhost:3001/cuotas/${id}`)
-      .then((res) => {
-        setCuota(res.data);
-        setLoading(false);
+    Promise.all([
+      axios.get(`${API_BASE}/cuotas/${id}`),
+      axios.get(`${API_BASE}/quitas`),
+    ])
+      .then(([resCuota, resQuitas]) => {
+        setCuota(resCuota.data);
+        setQuitas(resQuitas.data || []);
       })
       .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-
-    axios
-      .get("http://localhost:3001/quitas")
-      .then((res) => setQuitas(res.data))
-      .catch((err) => console.error("Error fetch quitas:", err));
+        console.error("Error cargando datos:", err);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
-  const estaVencida = () => {
-    if (!cuota) return false;
-    const hoy = new Date();
-    const venc = new Date(cuota.fechaVencimiento);
-    // ignorar horas
-    return new Date(hoy.toDateString()) > new Date(venc.toDateString());
-  };
+  // ----- Fetch nControl global -----
+  useEffect(() => {
+  setLoadingNControl(true);
+  axios
+    .get(`${API_BASE}/control`)
+    .then((res) => {
+      const curr = Number(
+        res.data?.numero ?? res.data?.numeroControl ?? 0
+      );
+      setNControlActual(curr);
+      setNControlSiguiente(curr + 1);
+    })
+    .catch((err) => {
+      console.error("Error al obtener nControl:", err);
+    })
+    .finally(() => setLoadingNControl(false));
+}, []);
 
-  // Recalcula monto mostrado (montoCalculado) cada vez que cambian datos
+  // ----- Helpers de cuota -----
+  const estaVencida = useMemo(() => {
+    if (!cuota) return () => false;
+    return () => {
+      const hoy = new Date();
+      const venc = new Date(cuota.fechaVencimiento);
+      return new Date(hoy.toDateString()) > new Date(venc.toDateString());
+    };
+  }, [cuota]);
+
+  const cuotaPagada = cuota?.estado === "pagada";
+
+  // ----- Recalcular montoCalculado cada vez que cambian datos relevantes -----
   useEffect(() => {
     if (!cuota) return;
+
     const prestamo = cuota.Prestamo || {};
     const cantidadCuotas = prestamo.cuotas?.length || 1;
 
-    // 1) Determinar finalPorCuota (lo que conceptualmente vale la cuota sin mora)
-    // preferimos usar prestamo.montoFinal / n, si no existe usar cuota.monto, si no usar prestamo.monto/n
+    // Determinar finalPorCuota (valor "base" sin mora)
     let finalPorCuota = 0;
     if (val(prestamo.montoFinal) > 0) {
       finalPorCuota = val(prestamo.montoFinal) / cantidadCuotas;
@@ -92,23 +117,25 @@ export default function VerCuota() {
       if (val(cuota.montoConInteres) > 0) {
         monto = val(cuota.montoConInteres);
       } else {
-        // Calculo simple de mora: interés diario sobre el valor final por cuota
         const hoy = new Date();
         const venc = new Date(cuota.fechaVencimiento);
-        const diffMs = new Date(hoy.toDateString()) - new Date(venc.toDateString());
-        const diasAtraso = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        const diffMs =
+          new Date(hoy.toDateString()) - new Date(venc.toDateString());
+        const diasAtraso = Math.max(
+          0,
+          Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        );
 
-        const tasaAnual = val(prestamo.tasaMoraAnual) / 100; // por ejemplo 50 => 0.5
+        const tasaAnual = val(prestamo.tasaMoraAnual) / 100; // ej. 50 => 0.5
         const tasaDiaria = tasaAnual / 365;
-        // interés de mora simple sobre el finalPorCuota (puedes cambiar a compuesto si querés)
         const interesMora = finalPorCuota * tasaDiaria * diasAtraso;
 
         monto = finalPorCuota + interesMora;
       }
     } else {
-      // No está vencida: monto base = finalPorCuota.
+      // No vencida: monto base = finalPorCuota.
       monto = finalPorCuota;
-      // aplicar quita (si hay) sobre la PORCIÓN INTERÉS de la cuota
+      // aplicar quita (si hay) sobre la PORCIÓN INTERÉS
       if (quitaSeleccionada) {
         const quita = quitas.find((q) => q.tipo === quitaSeleccionada);
         if (quita) {
@@ -119,87 +146,111 @@ export default function VerCuota() {
       }
     }
 
-    // redondeo a 2 decimales
-   const montoRounded = Math.round(monto * 100) / 100;
-  setMontoCalculado(montoRounded);
-   if (!montoRecibido || quitaSeleccionada) {
-    setMontoRecibido(montoRounded.toFixed(2));
-  }
+    const montoRounded = Math.round(monto * 100) / 100;
+    setMontoCalculado(montoRounded);
 
+    // Si no hay monto escrito a mano o se cambió la quita, sincronizamos el input
+    if (!montoRecibido || quitaSeleccionada) {
+      setMontoRecibido(montoRounded.toFixed(2));
+    }
+  }, [cuota, quitaSeleccionada]); // eslint-disable-line react-hooks/exhaustive-deps
 
- if (!montoRecibido || quitaSeleccionada) {
-    setMontoRecibido(montoRounded.toFixed(2));
-  }})
-const cuotaPagada = cuota?.estado === "pagada";
-  // Mostrar cantidad final que va a imprimirse / mostrarse: si el usuario ingresó valor lo usamos, si no usamos el calculado
- const displayAmount = cuotaPagada ? val(cuota.montoPagado) : (val(montoRecibido) > 0 ? val(montoRecibido) : montoCalculado);
+  // Mostrar cantidad final que se imprime / muestra:
+  const displayAmount = useMemo(() => {
+    if (!cuota) return 0;
+    if (cuotaPagada) return val(cuota.montoPagado);
+    return val(montoRecibido) > 0 ? val(montoRecibido) : montoCalculado;
+  }, [cuota, cuotaPagada, montoRecibido, montoCalculado]);
 
+  // Letras del monto
   useEffect(() => {
     setMontoEnLetras(numeroALetras(displayAmount));
   }, [displayAmount]);
+
+  // Sincronizar input cuando llega cuota o cambia calculado
   useEffect(() => {
-  if (!cuota) return;
-  if (cuotaPagada) {
-    setMontoRecibido(val(cuota.montoPagado).toFixed(2));
-  } else {
-    setMontoRecibido(montoCalculado.toFixed(2));
-  }
-}, [cuota, cuotaPagada, montoCalculado]);
-  
-
-  const handlePago = () => {
-  if (!cuota) return;
-
-  const pago = val(montoRecibido);
-  const hoy = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  let interes = 0;
-  if (estaVencida()) {
-    const prestamo = cuota.Prestamo || {};
-    const cantidadCuotas = prestamo.cuotas?.length || 1;
-
-    let finalPorCuota = val(prestamo.montoFinal) / cantidadCuotas || val(cuota.monto);
-    const capitalPorCuota = val(prestamo.monto) / cantidadCuotas;
-
-    if (val(cuota.montoConInteres) > 0) {
-      interes = val(cuota.montoConInteres) - capitalPorCuota;
+    if (!cuota) return;
+    if (cuotaPagada) {
+      setMontoRecibido(val(cuota.montoPagado).toFixed(2));
     } else {
-      const hoyDate = new Date();
-      const venc = new Date(cuota.fechaVencimiento);
-      const diffMs = hoyDate - venc;
-      const diasAtraso = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      const tasaAnual = val(prestamo.tasaMoraAnual) / 100;
-      const tasaDiaria = tasaAnual / 365;
-      interes = finalPorCuota * tasaDiaria * diasAtraso;
+      setMontoRecibido((val(montoCalculado) || 0).toFixed(2));
     }
-  }
+  }, [cuota, cuotaPagada, montoCalculado]);
 
-  axios
-    .post(`http://localhost:3001/cuotas/${id}/pago`, {
-      montoPagado: pago,
-      fechaPago: hoy,
-      interesPagado: interes,
-      quitaAplicada: !!quitaSeleccionada,   // 🔹 <-- nuevo
-    })
-    .then(() => {
+  // ----- Registrar pago + incrementar nControl -----
+  const handlePago = async () => {
+    if (!cuota) return;
+
+    const pago = val(montoRecibido);
+    const hoyISO = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    let interes = 0;
+    if (estaVencida()) {
+      const prestamo = cuota.Prestamo || {};
+      const cantidadCuotas = prestamo.cuotas?.length || 1;
+
+      const finalPorCuota =
+        (val(prestamo.montoFinal) > 0
+          ? val(prestamo.montoFinal) / cantidadCuotas
+          : val(cuota.monto)) || 0;
+
+      const capitalPorCuota = val(prestamo.monto) / cantidadCuotas;
+
+      if (val(cuota.montoConInteres) > 0) {
+        interes = val(cuota.montoConInteres) - capitalPorCuota;
+      } else {
+        const hoy = new Date();
+        const venc = new Date(cuota.fechaVencimiento);
+        const diffMs = new Date(hoy.toDateString()) - new Date(venc.toDateString());
+        const diasAtraso = Math.max(
+          0,
+          Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        );
+        const tasaAnual = val(prestamo.tasaMoraAnual) / 100;
+        const tasaDiaria = tasaAnual / 365;
+        interes = finalPorCuota * tasaDiaria * diasAtraso;
+      }
+    }
+
+    // Número de control visible en la boleta
+    const numeroControlUsado = nControlSiguiente;
+
+    try {
+      // 1) Registrar pago (si tu backend acepta numeroControl, lo guardamos para auditoría)
+      await axios.post(`${API_BASE}/cuotas/${id}/pago`, {
+        montoPagado: pago,
+        fechaPago: hoyISO,
+        interesPagado: interes,
+        quitaAplicada: !!quitaSeleccionada,
+        numeroControl: numeroControlUsado, // opcional pero recomendado
+      });
+
+      // 2) Incrementar nControl global
+      await axios.post(`${API_BASE}/control/sumar`);
+
+      // 3) Feedback y estado local
       alert("✅ Pago registrado");
       setCuota((prev) => ({
         ...prev,
         estado: "pagada",
-        fechaPago: hoy,
+        fechaPago: hoyISO,
         interesPagado: interes,
         montoPagado: pago,
+        numeroControl: numeroControlUsado,
       }));
-    })
-    .catch((err) => {
+
+      // 4) Actualizar contador local (para próxima boleta)
+      setNControlActual((prev) => (prev == null ? null : prev + 1));
+      setNControlSiguiente((prev) => (prev == null ? null : prev + 1));
+    } catch (err) {
       console.error(err);
       alert(err.response?.data?.error || "Error en pago");
-    });
-};
+    }
+  };
 
   if (loading) return <Spinner size="xl" />;
 
-  const prestamo = cuota.Prestamo || {};
+  const prestamo = cuota?.Prestamo || {};
   const cliente = prestamo?.User || {};
 
   const capitalize = (str) =>
@@ -212,66 +263,66 @@ const cuotaPagada = cuota?.estado === "pagada";
   const anio = hoy.getFullYear();
   const fechaString = `${dia} ${mes} ${anio}`;
 
-  const montoMenor = cuota.montoConInteres
-  console.log(montoMenor);
-  
+  const montoMenor = cuota?.montoConInteres;
+
+  // N° de control a mostrar (si ya está pagada, mostramos el que quedó; si no, el global+1)
+  const nroControlParaMostrar = cuotaPagada
+    ? cuota?.numeroControl ?? nControlSiguiente
+    : nControlSiguiente;
 
   return (
-    <Box >
+    <Box>
       {/* Panel superior (no imprimible) */}
       {!(montoMenor > 10 && displayAmount > montoMenor) && (
-  <Flex
-    className="no-print"
-    bg="gray.800"
-    color="white"
-    p={3}
-    align="center"
-    position="relative"
-    zIndex={10}
-  >
-    <Input
-      type="number"
-      step="0.01"
-      value={montoRecibido}
-      onChange={(e) => {
-        const valStr = e.target.value.replace(",", ".");
-        setMontoRecibido(valStr);
-      }}
-      placeholder="Monto recibido"
-      w="200px"
-      ml={2}
-      mr={4}
-    />
-    {estaVencida() ? (
-      <Text fontWeight="bold">Ingrese monto a pagar (mínimo intereses)</Text>
-    ) : (
-      <>
-        <Text fontWeight="bold" mr={5}>
-          Aplicar quita
-        </Text>
-        {quitas.length > 0 && (
-          <Select
-            value={quitaSeleccionada}
-            onChange={(e) => setQuitaSeleccionada(e.target.value)}
+        <Flex
+          className="no-print"
+          bg="gray.800"
+          color="white"
+          p={3}
+          align="center"
+          position="relative"
+          zIndex={10}
+          gap={4}
+        >
+          <Input
+            type="number"
+            step="0.01"
+            value={montoRecibido}
+            onChange={(e) => {
+              const valStr = e.target.value.replace(",", ".");
+              setMontoRecibido(valStr);
+            }}
+            placeholder="Monto recibido"
             w="200px"
-            bg="white"
-            color="black"
-          >
-            <option value="">Sin descuento</option>
-            {quitas.map((q) => (
-              <option key={q.id} value={q.tipo}>
-                {q.tipo === "tipo1" ? "Opción 1" : "Opción 2"} ({q.porcentaje}%)
-              </option>
-            ))}
-          </Select>
-        )}
-      </>
-    )}
-  </Flex>
-)}
+          />
+
+          {estaVencida() ? (
+            <Text fontWeight="bold">Ingrese monto a pagar (mínimo intereses)</Text>
+          ) : (
+            <>
+              <Text fontWeight="bold">Aplicar quita</Text>
+              <Select
+                value={quitaSeleccionada}
+                onChange={(e) => setQuitaSeleccionada(e.target.value)}
+                w="220px"
+                bg="white"
+                color="black"
+              >
+                <option value="">Sin descuento</option>
+                {quitas.map((q) => (
+                  <option key={q.id} value={q.tipo}>
+                    {q.tipo === "tipo1" ? "Opción 1" : "Opción 2"} ({q.porcentaje}
+                    %)
+                  </option>
+                ))}
+              </Select>
+            </>
+          )}
+        </Flex>
+      )}
 
       {/* Boletas duplicadas */}
-      <Box w="100%" maxW="100%" className="screen-preview" >
+      <Box w="100%" maxW="100%" className="screen-preview">
         {[0, 1].map((i) => (
           <Box
             key={i}
@@ -281,7 +332,8 @@ const cuotaPagada = cuota?.estado === "pagada";
             w="100%"
             height="47%"
           >
-         {/*    <Image
+            {/* Si usás una imagen de fondo para el recibo, descomentalo */}
+            {/* <Image
               src={recibo}
               alt="Recibo"
               width="700px"
@@ -290,32 +342,39 @@ const cuotaPagada = cuota?.estado === "pagada";
               zIndex={0}
             /> */}
 
-            <Box position="absolute" top="0" left="0" w="100%" h="100%" bgColor={"white"}>
+            <Box
+              position="absolute"
+              top="0"
+              left="0"
+              w="100%"
+              h="100%"
+              bgColor={"white"}
+            >
               <Text position="absolute" top="19px" right="31px" fontWeight="bold">
                 {fechaString}
               </Text>
+
               <Text position="absolute" top="44px" right="38px" fontWeight="bold">
-                N° Control: {cuota.numeroControl}
+                N° Control: {loadingNControl ? "..." : nroControlParaMostrar ?? "-"}
               </Text>
+
               <Text position="absolute" top="70px" left="170px" fontWeight="bold">
-                {cuota.numeroCuota}/{prestamo?.cuotas?.length ?? "-"}
+                {cuota?.numeroCuota}/{prestamo?.cuotas?.length ?? "-"}
               </Text>
+
               <Text position="absolute" top="105px" left="210px">
                 {capitalize(cliente?.name)} {capitalize(cliente?.surname)}
               </Text>
+
               <Text position="absolute" top="136px" left="280px" w="50%">
                 {montoEnLetras}
               </Text>
-        <Text
-  position="absolute"
-  top="400px"
-  left="150px"
-  fontWeight="bold"
->
-  {montoMenor < 10 && displayAmount > montoMenor
-    ? `$ ${val(displayAmount).toLocaleString("es-AR")}`
-    : `$${val(montoMenor).toLocaleString("es-AR")}`}
-</Text>
+
+              <Text position="absolute" top="400px" left="150px" fontWeight="bold">
+                {montoMenor < 10 && displayAmount > montoMenor
+                  ? `$ ${val(displayAmount).toLocaleString("es-AR")}`
+                  : `$${val(montoMenor).toLocaleString("es-AR")}`}
+              </Text>
             </Box>
           </Box>
         ))}
@@ -330,12 +389,12 @@ const cuotaPagada = cuota?.estado === "pagada";
           gap={3}
           m={"370px"}
         >
-         {!cuotaPagada && (
-  <Button colorScheme="green" onClick={handlePago} >
-    Registrar Pago
-  </Button>
-)}
-          <Button colorScheme="blue" onClick={() => window.print() }>
+          {!cuotaPagada && (
+            <Button colorScheme="green" onClick={handlePago}>
+              Registrar Pago
+            </Button>
+          )}
+          <Button colorScheme="blue" onClick={() => window.print()}>
             Imprimir
           </Button>
         </Box>

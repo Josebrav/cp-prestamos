@@ -31,7 +31,20 @@ export default function ReporteSGP() {
     }
 
     return (
-        <Box minH="60vh" bg="gray.50" ml="10%" mr="10%" py={8}>
+         <Box
+      w="80%"
+      maxW="1200px"
+      mx="auto"
+    
+      mb={6}
+      bg="white"
+      borderRadius="lg"
+      boxShadow="md"
+      borderWidth="1px"
+       borderTopRadius={0}
+      p={[4, 6, 8]}   // padding responsive
+    >
+      
             <VStack align="stretch" spacing={4}>
                 <Heading size="lg" mb={4} textAlign="center">REPORTE SGP</Heading>
 

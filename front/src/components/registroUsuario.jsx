@@ -150,8 +150,8 @@ const RegistroUsuario = () => {
               <FormLabel>Veraz</FormLabel>
               <Select name="veraz" value={formData.veraz} onChange={handleChange}>
                 <option value="">Seleccionar</option>
-                <option value="positivo">Positivo</option>
-                <option value="negativo">Negativo</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
               </Select>
             </FormControl>
             <FormControl>
