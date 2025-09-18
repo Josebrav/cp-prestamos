@@ -1,80 +1,5 @@
-// services/postPrestamo.js
-const { Prestamo, TasaConfig, Cuota } = require('../database');
-
-// ============================
-// Funciones auxiliares
-// ============================
-
-// Conversión anual→mensual "legacy": r = TNA * (diasPromMes / 365)
-// Ej.: TNA=249 => r ≈ 0.2080027 con diasPromMes=30.49
-function getMonthlyRateFromAnnual_TNA_legacy(tnaPercent, diasPromMes = 30.49) {
-  const tna = Number(tnaPercent) / 100; // pasa de % a proporción
-  if (!isFinite(tna)) throw new Error("tnaPercent inválido");
-  return tna * (Number(diasPromMes) / 365);
-}
-
-// PMT (sistema francés) => cuota fija
-function pmt(P, r, n) {
-  if (r === 0) return P / n;
-  return (P * r) / (1 - Math.pow(1 + r, -n));
-}
-
-// Avanza la fecha un mes manteniendo día cuando se pueda
-function addOneMonth(d) {
-  const dt = new Date(d);
-  const day = dt.getDate();
-  dt.setMonth(dt.getMonth() + 1);
-  // Ajuste si el mes nuevo tiene menos días
-  if (dt.getDate() < day) {
-    dt.setDate(0); // último día del mes anterior al "overflow"
-  }
-  return dt;
-}
-
-// Crea cuotas en sistema francés
-async function crearPlanFrances({ prestamoId, fechaInicio, monto, rMensual, n }) {
-  const cuotas = [];
-  const P = Number(monto);
-  const r = Number(rMensual);
-  const N = Number(n);
-
-  const cuotaFija = (P * r) / (1 - Math.pow(1 + r, -N));
-
-  let saldo = P;
-  let fechaVto = new Date(fechaInicio);
-
-  for (let k = 1; k <= N; k++) {
-    const interes = saldo * r;
-    const amortizacion = cuotaFija - interes;
-    const nuevoSaldo = Math.max(0, saldo - amortizacion);
-
-    const cuotaK = Number(cuotaFija.toFixed(2));
-    const interesK = Number(interes.toFixed(2));
-    const amortK = Number(amortizacion.toFixed(2));
-    const saldoK = Number(nuevoSaldo.toFixed(2));
-
-    cuotas.push({
-      prestamoId,
-      numero: k,
-      fechaVencimiento: new Date(fechaVto),
-      montoCuota: cuotaK,
-      interes: interesK,
-      amortizacion: amortK,
-      saldo: saldoK,
-      estado: 'pendiente',
-    });
-
-    saldo = nuevoSaldo;
-    fechaVto = addOneMonth(fechaVto);
-  }
-
-  await Cuota.bulkCreate(cuotas);
-  return { cuotaFija: Number(cuotaFija.toFixed(2)) };
-}
-
-// ============================
-// Servicio principal
-// ============================
+const { Prestamo, TasaConfig } = require('../database');
+const createCuotas = require('./createCuota');
 
 const postPrestamo = async (prestamoData) => {
   const {
@@ -98,17 +23,11 @@ const postPrestamo = async (prestamoData) => {
 
   const tasaAnual = parseFloat(config.tasaAnual);
 
-  // Conversión "legacy": TNA * (30.49 / 365)
-  const diasPromMes = config.diasPromMes ? Number(config.diasPromMes) : 30.49;
-  const rMensual = getMonthlyRateFromAnnual_TNA_legacy(tasaAnual, diasPromMes);
+  // ✅ Nuevo cálculo: interés proporcional según días de cuotas
+  const interesCalculado = (tasaAnual / 365) * (cuotas * 21.01); // % total
+  const montoFinalCalculado = parseFloat(monto) * (1 + interesCalculado / 100);
 
-  // Sistema francés
-  const P = Number(monto);
-  const N = Number(cuotas);
-  const cuotaFija = pmt(P, rMensual, N);
-  const montoFinalCalculado = cuotaFija * N;
-
-  // Numero de control incremental
+  // 🔹 Calcular numeroControl (incremental por usuario)
   const ultimoPrestamo = await Prestamo.findOne({
     where: { userId },
     order: [['numeroControl', 'DESC']],
@@ -120,24 +39,20 @@ const postPrestamo = async (prestamoData) => {
     userId,
     numeroControl,
     fechaInicio,
-    monto: P,
+    monto,
     tipoTasa,
     tasaMoraAnual: tasaAnual,
-    cuotas: N,
-    montoFinal: Number(montoFinalCalculado.toFixed(2)),
+    cuotas,
+    montoFinal: montoFinalCalculado.toFixed(2),
     estado: estado || 'pendiente',
-    // Trazabilidad
-    tasaMensualAplicada: Number((rMensual * 100).toFixed(6)),
-    metodoTasa: `TNA * (${diasPromMes}/365)`,
   });
 
-  // Crear plan francés
-  await crearPlanFrances({
+  // Crear cuotas con monto dividido en partes iguales
+  await createCuotas({
     prestamoId: newPrestamo.id,
-    fechaInicio: new Date(fechaInicio),
-    monto: P,
-    rMensual,
-    n: N,
+    fechaInicio,
+    montoBase: montoFinalCalculado,
+    cantidadCuotas: cuotas,
   });
 
   return newPrestamo;
