@@ -19,7 +19,7 @@ server.get('', (req, res) => {
 });
 
 conn.sync({ force: false }).then(async () => {
-/*   await initControl(); 
+   /*await initControl(); 
   await initializeTasas(); // Inicializa tasas
   await QuitaCuotas.bulkCreate([
   { tipo: "tipo1", porcentaje: 10 },

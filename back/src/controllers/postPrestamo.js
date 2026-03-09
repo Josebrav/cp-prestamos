@@ -7,7 +7,7 @@ const postPrestamo = async (prestamoData) => {
     fechaInicio,
     monto,
     tipoTasa,
-    cuotas, // cantidad de cuotas
+    cuotas, 
     estado,
   } = prestamoData;
 
@@ -22,10 +22,16 @@ const postPrestamo = async (prestamoData) => {
   }
 
   const tasaAnual = parseFloat(config.tasaAnual);
+  console.log("1", tasaAnual, monto, tipoTasa,config.tasaAnual,cuotas);
+  
 
-  // ✅ Nuevo cálculo: interés proporcional según días de cuotas
-  const interesCalculado = (tasaAnual / 365) * (cuotas * 21.01); // % total
-  const montoFinalCalculado = parseFloat(monto) * (1 + interesCalculado / 100);
+
+  const tasaMes = ((tasaAnual / 100) / 12 ) ;
+  const aux = Math.pow((1 + tasaMes),-cuotas);
+  const ani = ((1 - aux)/tasaMes)
+
+  const vCuota = (monto/ani)
+  const montoFinalCalculado = vCuota * cuotas;
 
   // 🔹 Calcular numeroControl (incremental por usuario)
   const ultimoPrestamo = await Prestamo.findOne({
