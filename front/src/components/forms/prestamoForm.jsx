@@ -116,10 +116,24 @@ const PrestamoForm = () => {
       return;
     }
 
+
+
     const tasaAnual = tasas[tipoTasa];
-    const interesCalculado = (tasaAnual / 365) * (parseInt(cuotas) * 21.01);
-    const montoFinal = parseFloat(monto) * (1 + interesCalculado / 100);
-    const montoPorCuota = montoFinal / parseInt(cuotas);
+    console.log(tasaAnual);
+    
+    const montoNum = parseFloat(monto);
+const cuotasNum = parseInt(cuotas);
+const tasaMes = (tasaAnual / 100) / 12;
+
+const aux = Math.pow((1 + tasaMes), -cuotasNum);
+const ani = (1 - aux) / tasaMes;
+
+const valorCuota = montoNum / ani;
+const montoFinal = valorCuota * cuotasNum;
+const montoPorCuota = valorCuota;
+
+
+    
 
     const cuotasSimuladas = [];
     for (let i = 0; i < parseInt(cuotas); i++) {
