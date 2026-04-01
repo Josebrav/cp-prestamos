@@ -65,7 +65,7 @@ export default function VerPrestamos() {
   const fetchCliente = () => {
     setLoadingCliente(true);
     axios
-      .get(`http://192.168.0.115:3001/usuario/${id}`)
+      .get(`http://192.168.0.147:3001/usuario/${id}`)
       .then((res) => {
         setCliente(res.data);
         setLoadingCliente(false);
@@ -82,8 +82,9 @@ export default function VerPrestamos() {
 
   const fetchPrestamos = () => {
     axios
-      .get(`http://192.168.0.115:3001/prestamos/usuario/${id}`)
+      .get(`http://192.168.0.147:3001/prestamos/usuario/${id}`)
       .then((res) => {
+        console.log("🔥 RESPONSE COMPLETA:", res.data); // 👈 AGREGÁ ESTO
         setPrestamos(res.data);
         setLoading(false);
       })
@@ -136,7 +137,7 @@ export default function VerPrestamos() {
 
   const handleAccionPrestamo = (prestamoId, nuevoEstado) => {
     axios
-      .put(`http://192.168.0.115:3001/actualizarprestamo/${prestamoId}/estado`, {
+      .put(`http://192.168.0.147:3001/actualizarprestamo/${prestamoId}/estado`, {
         estado: nuevoEstado,
       })
       .then(() => {
@@ -175,10 +176,17 @@ export default function VerPrestamos() {
       p={6}
       pb="140px"
     >
+      <Button
+        mb={4}
+        colorScheme="gray"
+        onClick={() => navigate(-1)}
+      >
+        ← Volver
+      </Button>
       <Box display="flex" justifyContent="center">
         <Box
           bg="white"
-          w={{ base: "100%", md: "80%", lg: "70%" }}
+          w={{ base: "100%", md: "80%", lg: "75" }}
           borderRadius="lg"
           boxShadow="md"
           p={6}
@@ -194,7 +202,14 @@ export default function VerPrestamos() {
             <Accordion allowMultiple>
               {prestamos
                 .slice()
-                .sort((a, b) => (b.numeroControl || 0) - (a.numeroControl || 0))
+                .sort((a, b) => {
+  // prioridad: pendientes primero
+  if (a.estado === "pendiente" && b.estado !== "pendiente") return -1;
+  if (a.estado !== "pendiente" && b.estado === "pendiente") return 1;
+
+  // después por numeroControl descendente
+  return (a.numeroControl || 0) - (b.numeroControl || 0);
+})
                 .map((prestamo) => (
                   <AccordionItem
                     key={prestamo.id}
@@ -206,65 +221,68 @@ export default function VerPrestamos() {
                     <h2>
                       <AccordionButton _expanded={{ bg: "blue.50" }}>
                         <Box flex="1" textAlign="left">
-                          <Text fontWeight="bold">
-                            Préstamo #{prestamo.numeroControl || prestamo.id}
-                          </Text>
-                          <Text>Monto: ${formatMoney(prestamo.monto)}</Text>
-                          <Text>Cuotas: {renderInfoCuotas(prestamo.cuotas)}</Text>
-                          <Text>
-                            Monto pendiente: $
-                            {formatMoney(calcularMontoPendiente(prestamo.cuotas))}
-                          </Text>
-                          <Text>Estado: {prestamo.estado}</Text>
-                          <Text>
-                            Monto final: {formatMoney(prestamo.montoFinal ?? 0)}
-                          </Text>
-                        </Box>
+  <Text fontWeight="bold">
+    #{prestamo.numeroControl || prestamo.id}
+  </Text>
+
+  <Text fontSize="sm">
+    Monto: ${formatMoney(prestamo.monto)}
+  </Text>
+
+  <Text fontSize="sm">
+    Fecha: {new Date(prestamo.createdAt).toLocaleDateString("es-AR")}
+  </Text>
+</Box>
                         <AccordionIcon />
                       </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
-                      <Box mt={2} display="flex" gap={2} flexWrap="wrap">
-                        {prestamo.estado === "pendiente" && (
+                      <Box mb={4}>
+  <Text><b>Estado:</b> {prestamo.estado}</Text>
+  <Text>
+    <b>Monto pendiente:</b> $
+    {formatMoney(calcularMontoPendiente(prestamo.cuotas))}
+  </Text>
+  <Text>
+    <b>Monto final:</b> {formatMoney(prestamo.montoFinal ?? 0)}
+  </Text>
+  <Text>
+    <b>Cuotas:</b> {renderInfoCuotas(prestamo.cuotas)}
+  </Text>
+</Box>
+                      {prestamo.estado !== "cancelado" && (
+                        <Box mt={2} display="flex" gap={2} flexWrap="wrap">
+
+                          {prestamo.estado === "pendiente" && (
+                            <Button
+                              size="sm"
+                              colorScheme="green"
+                              onClick={() => handleAccionPrestamo(prestamo.id, "al dia")}
+                            >
+                              Aprobar
+                            </Button>
+                          )}
+
+                          {prestamo.estado !== "finalizado" && (
+                            <Button
+                              size="sm"
+                              colorScheme="red"
+                              onClick={() => handleAccionPrestamo(prestamo.id, "cancelado")}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
+
                           <Button
                             size="sm"
-                            colorScheme="green"
-                            onClick={() => handleAccionPrestamo(prestamo.id, "al dia")}
+                            colorScheme="purple"
+                            onClick={() => navigate(`/contrato/${prestamo.id}`)}
                           >
-                            Aprobar
+                            Ver Contrato
                           </Button>
-                        )}
-                        {prestamo.estado !== "cancelado" &&
-                          prestamo.estado !== "finalizado" && (
-                            <>
-                              <Button
-                                size="sm"
-                                colorScheme="red"
-                                onClick={() => handleAccionPrestamo(prestamo.id, "cancelado")}
-                              >
-                                Cancelar
-                              </Button>
 
-                              <Button
-                                size="sm"
-                                colorScheme="blue"
-                                onClick={() =>
-                                  handleAccionPrestamo(prestamo.id, "finalizado")
-                                }
-                              >
-                                Finalizar
-                              </Button>
-                              
-                            </>
-                          )}
-                        <Button
-                          size="sm"
-                          colorScheme="purple"
-                          onClick={() => navigate(`/contrato/${prestamo.id}`)}
-                        >
-                          Ver Contrato
-                        </Button>
-                      </Box>
+                        </Box>
+                      )}
 
                       <Divider my={4} />
 
@@ -279,7 +297,8 @@ export default function VerPrestamos() {
                             <Th>Monto</Th>
                             <Th>Monto con Interés</Th>
                             <Th>Estado</Th>
-                            <Th>Detalles</Th>
+                            <Th>Pagos parciales</Th>
+                            <Th>Pago total</Th>
                             <Th>Imprimir</Th>
                           </Tr>
                         </Thead>
@@ -294,31 +313,33 @@ export default function VerPrestamos() {
                             )
                             .map((cuota, index, cuotasOrdenadas) => {
                               const num = cuota.numeroCuota ?? cuota.numero;
-
+const prestamoCancelado = prestamo.estado === "cancelado";
                               const isPaid = cuota.estado === "pagada";
                               const prevIsPaid =
                                 index > 0
                                   ? cuotasOrdenadas[index - 1].estado === "pagada"
                                   : false;
 
-                              const displayAmount = isPaid
-                                ? cuota.montoPagado ??
-                                  cuota.montoConInteres ??
-                                  cuota.monto ??
-                                  0
-                                : cuota.montoConInteres ?? cuota.monto ?? 0;
+                    const displayAmount = isPaid
+  ? cuota.montoPagado ??
+    cuota.montoConInteres ??
+    cuota.monto ??
+    0
+  : cuota.estado === "vencida"
+  ? cuota.monto ?? 0
+  : cuota.monto ?? 0;
 
                               const showLupa = isPaid;
                               const showPrinter =
                                 index === 0 || isPaid || prevIsPaid;
 
+                              const tienePagos = cuota.PagoCuota?.length > 0;
+
                               return (
                                 <Tr key={cuota.id}>
                                   <Td>{num}</Td>
                                   <Td>
-                                    {new Date(
-                                      cuota.fechaVencimiento
-                                    ).toLocaleDateString()}
+                                    {cuota.fechaVencimiento}
                                   </Td>
                                   <Td>${formatMoney(displayAmount)}</Td>
                                   <Td>
@@ -338,7 +359,37 @@ export default function VerPrestamos() {
                                   </Td>
 
                                   <Td>
-                                    {showLupa && (
+                                    {tienePagos && !prestamoCancelado ? (
+                                      <Button
+                                        size="xs"
+                                        colorScheme="orange"
+                                        onClick={() => {
+                                          const detalle = cuota.PagoCuota
+  .map(p => `
+    <p><b>Fecha:</b> ${new Date(p.fechaPago).toLocaleDateString("es-AR", {
+      timeZone: "UTC",
+    })}</p>
+    <p><b>Monto:</b> $${formatMoney(p.monto)}</p>
+    <hr/>
+  `)
+  .join("");
+
+                                          Swal.fire({
+                                            title: `Pagos - Cuota ${num}`,
+                                            html: detalle,
+                                            width: 500
+                                          });
+                                        }}
+                                      >
+                                        Ver
+                                      </Button>
+                                    ) : (
+                                      "-"
+                                    )}
+                                  </Td>
+
+                                  <Td>
+                                    {showLupa && !prestamoCancelado && (
                                       <IconButton
                                         aria-label="Ver detalles de pago"
                                         icon={<FiSearch />}
@@ -349,12 +400,12 @@ export default function VerPrestamos() {
                                           Swal.fire({
                                             title: `Cuota #${num}`,
                                             html: `
-                                              <p><b>Fecha de pago:</b> ${
-                                                cuota.fechaPago
-                                                  ? new Date(
-                                                      cuota.fechaPago
-                                                    ).toLocaleDateString()
-                                                  : "-"
+                                              <p><b>Fecha de pago:</b> ${cuota.fechaPago
+                                                ? new Date(cuota.fechaPago).toLocaleDateString("es-AR", {
+  timeZone: "UTC",
+})
+                                             
+                                                : "-"
                                               }</p>
                                               <p><b>Monto pagado:</b> $${formatMoney(
                                                 displayAmount
@@ -371,7 +422,7 @@ export default function VerPrestamos() {
                                   </Td>
 
                                   <Td>
-                                    {showPrinter && (
+                                    {showPrinter && !prestamoCancelado && ( 
                                       <IconButton
                                         aria-label="Imprimir cuota"
                                         icon={<FiPrinter />}

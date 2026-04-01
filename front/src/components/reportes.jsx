@@ -13,11 +13,14 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
+
 export default function Reportes() {
   const navigate = useNavigate();
 
-  // Autenticación
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // 🔐 Autenticación persistente
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    localStorage.getItem("auth") === "true"
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,16 +28,22 @@ export default function Reportes() {
   const handleLogin = () => {
     if (username === "anibal" && password === "norma01") {
       setIsAuthenticated(true);
+      localStorage.setItem("auth", "true"); // 🔥 guarda sesión
       setError("");
     } else {
       setError("Usuario o contraseña incorrectos");
     }
   };
 
-  // Estado para reportes
+  const handleLogout = () => {
+    localStorage.removeItem("auth");
+    setIsAuthenticated(false);
+  };
+
+  // 📊 Estado para reportes
   const [reporte, setReporte] = useState("");
   const [anio, setAnio] = useState(new Date().getFullYear());
-  const [mes, setMes] = useState(new Date().getMonth() + 1); // 1-12
+  const [mes, setMes] = useState(new Date().getMonth() + 1);
 
   const irAlReporte = () => {
     if (reporte === "prestamosMes") {
@@ -63,15 +72,13 @@ export default function Reportes() {
     }
   };
 
-  // ===== Login =====
+  // ===== LOGIN =====
   if (!isAuthenticated) {
     return (
       <Box
         w="80%"
         maxW="1200px"
         mx="auto"
-        
-        mb={6}
         minH="50vh"
         display="flex"
         alignItems="center"
@@ -83,7 +90,7 @@ export default function Reportes() {
           bg="white"
           rounded="lg"
           shadow="md"
-         p={6}
+          p={6}
           borderWidth="1px"
         >
           <VStack spacing={4} align="stretch">
@@ -119,28 +126,43 @@ export default function Reportes() {
             <Button colorScheme="teal" onClick={handleLogin} w="full">
               Ingresar
             </Button>
+
+            {/* 🔙 Volver */}
+            <Button onClick={() => navigate(-1)} variant="ghost">
+              ← Volver
+            </Button>
           </VStack>
         </Box>
       </Box>
     );
   }
 
-  // ===== Pantalla principal =====
+  // ===== PANTALLA PRINCIPAL =====
   return (
     <Box
       w="80%"
       maxW="1200px"
       mx="auto"
-    
       mb={6}
       bg="white"
       borderRadius="lg"
       boxShadow="md"
       borderWidth="1px"
-       borderTopRadius={0}
-      p={[4, 6, 8]}   // padding responsive
+      borderTopRadius={0}
+      p={[4, 6, 8]}
     >
       <VStack spacing={6} align="stretch">
+        {/* 🔙 Volver + Logout */}
+        <Stack direction="row" justify="space-between">
+          <Button onClick={() => navigate(-1)} colorScheme="gray">
+            ← Volver
+          </Button>
+
+          <Button onClick={handleLogout} colorScheme="red" size="sm">
+            Cerrar sesión
+          </Button>
+        </Stack>
+
         <Text fontSize={["xl", "2xl"]} fontWeight="bold">
           Reportes
         </Text>
@@ -154,14 +176,19 @@ export default function Reportes() {
           >
             <option value="prestamosMes">Préstamos confirmados en el mes</option>
             <option value="totalCobrarMes">Total a cobrar del mes</option>
-            <option value="totalCobrarAcumulado">Total a cobrar acumulado</option>
-            <option value="restanteFuturo">Restante a cobrar a futuro</option>
+            <option value="totalCobrarAcumulado">
+              Total a cobrar acumulado
+            </option>
+            <option value="restanteFuturo">
+              Restante a cobrar a futuro
+            </option>
             <option value="legales">En legales</option>
             <option value="resumen">Resumen</option>
           </Select>
         </FormControl>
 
-        {(reporte === "prestamosMes" || reporte === "totalCobrarMes") && (
+        {(reporte === "prestamosMes" ||
+          reporte === "totalCobrarMes") && (
           <Stack direction={["column", "row"]} spacing={4}>
             <FormControl>
               <FormLabel>Año</FormLabel>
@@ -169,13 +196,15 @@ export default function Reportes() {
                 type="number"
                 value={anio}
                 onChange={(e) => setAnio(e.target.value)}
-                placeholder="Ej: 2025"
               />
             </FormControl>
 
             <FormControl>
               <FormLabel>Mes</FormLabel>
-              <Select value={mes} onChange={(e) => setMes(e.target.value)}>
+              <Select
+                value={mes}
+                onChange={(e) => setMes(e.target.value)}
+              >
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {i + 1}

@@ -3,8 +3,9 @@ import {
   Box, FormControl, FormLabel, Input, Button, VStack, Text, HStack 
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://192.168.0.115:3001';
+const API_BASE = 'http://192.168.0.147:3001';
 
 export default function EditarTasas() {
   // Estado de tasas
@@ -22,6 +23,7 @@ export default function EditarTasas() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   // Pasar a legales
   const [numeroControl, setNumeroControl] = useState('');
@@ -152,6 +154,7 @@ const borrarPrestamoPorNumeroControl = async () => {
         justifyContent="center"
         bgColor={"white"}
       >
+        
         <Box
           w={["100%", "420px"]}
           bg="white"
@@ -172,6 +175,13 @@ const borrarPrestamoPorNumeroControl = async () => {
             </FormControl>
             {error && <Text color="red.500">{error}</Text>}
             <Button colorScheme="teal" onClick={handleLogin}>Ingresar</Button>
+            <Button
+  mb={4}
+  colorScheme="gray"
+  onClick={() => navigate(-1)}
+>
+  ← Volver
+</Button>
           </VStack>
         </Box>
       </Box>

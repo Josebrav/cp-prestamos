@@ -53,7 +53,7 @@ export function numeroALetras(numero) {
   const entero = Math.floor(numero);
   const decimales = Math.round((numero - entero) * 100);
 
-  let texto = convertirMiles(entero) + " pesos";
+  let texto = "pesos " +convertirMiles(entero) ;
   if (decimales > 0) {
     texto += ` con ${decimales}/100`;
   }

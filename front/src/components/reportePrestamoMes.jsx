@@ -15,8 +15,9 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { FiPrinter } from "react-icons/fi";
 
-const API_BASE = "http://192.168.0.115:3001";
+const API_BASE = "http://192.168.0.147:3001";
 
 export default function ReportePrestamosMes() {
   const navigate = useNavigate();
@@ -58,28 +59,96 @@ export default function ReportePrestamosMes() {
 
     return { total, pagadas, vencidas, adeudado };
   };
+const prestamosAlDia = prestamos
+  .filter(p => p.estado === "al dia")
+  .sort((a, b) => a.numeroControl - b.numeroControl);
+ const handlePrint = () => {
+  const contenido = document.getElementById("print-area").innerHTML;
 
+  const ventana = window.open("", "", "width=900,height=700");
+
+  ventana.document.write(`
+    <html>
+      <head>
+        <title>Reporte</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+
+          body {
+            font-family: Arial;
+            margin: 0;
+            padding: 0;
+          }
+
+          .container {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* 🔥 CLAVE */
+          }
+
+          th, td {
+            border: 1px solid black;
+            padding: 5px;
+            font-size: 11px; /* 🔥 achica un poco */
+            word-wrap: break-word;
+          }
+
+          h1, h2 {
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          ${contenido}
+        </div>
+      </body>
+    </html>
+  `);
+
+  ventana.document.close();
+  ventana.focus();
+  ventana.print();
+};
   return (
-     <Box
+    <Box
       w="80%"
       maxW="1200px"
       mx="auto"
-    
+
       mb={6}
       bg="white"
       borderRadius="lg"
       boxShadow="md"
       borderWidth="1px"
-       borderTopRadius={0}
+      borderTopRadius={0}
       p={[4, 6, 8]}   // padding responsive
+      id="print-area"
     >
-      
+
       <VStack align="stretch" spacing={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Text fontSize="2xl" fontWeight="bold">
             Préstamos confirmados — {anio}/{mes}
           </Text>
           <Button onClick={() => navigate(-1)}>Volver</Button>
+            <Button
+  mb={4}
+  ml={2}
+  colorScheme="blue"
+  leftIcon={<FiPrinter />}
+  onClick={handlePrint}
+>
+  Imprimir
+</Button>
         </Box>
 
         {(!anio || !mes) && (
@@ -90,7 +159,7 @@ export default function ReportePrestamosMes() {
           <Box display="flex" alignItems="center" gap={3}>
             <Spinner /> <Text>Cargando...</Text>
           </Box>
-        ) : prestamos.length > 0 ? (
+       ) : prestamosAlDia.length > 0 ? (
           <Table variant="striped" bg="white" rounded="md" shadow="sm" size="sm">
             <Thead bg="gray.100">
               <Tr>
@@ -106,7 +175,7 @@ export default function ReportePrestamosMes() {
               </Tr>
             </Thead>
             <Tbody>
-              {prestamos.map((p) => {
+              {prestamosAlDia.map((p) => {
                 const { total, pagadas, vencidas, adeudado } =
                   calcularResumenCuotas(p.cuotas);
 
@@ -118,8 +187,19 @@ export default function ReportePrestamosMes() {
                     </Td>
                     <Td>{p.User?.dni ?? "—"}</Td>
                     <Td>{p.fechaInicio}</Td>
-                    <Td isNumeric>{Number(p.monto).toFixed(2)}</Td>
-                    <Td isNumeric>{adeudado.toFixed(2)}</Td>
+                    <Td isNumeric>
+                      {Number(p.monto).toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Td>
+
+                    <Td isNumeric>
+                      {Number(adeudado).toLocaleString("es-AR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Td>
                     <Td>
                       {pagadas}/{total}
                     </Td>

@@ -18,8 +18,9 @@ import { useNavigate } from 'react-router-dom';
 
 const PrestamoForm = () => {
   const [monto, setMonto] = useState('');
-  const hoy = new Date().toISOString().split("T")[0];
-  const [fecha, setFecha] = useState(hoy);
+ const [fecha, setFecha] = useState(() => {
+  return new Date().toISOString().split("T")[0];
+});
   const [cuotas, setCuotas] = useState('');
   const [tipoTasa, setTipoTasa] = useState('normal');
   const [dni, setDni] = useState('');
@@ -29,12 +30,14 @@ const PrestamoForm = () => {
 
   const [tasas, setTasas] = useState({}); // 👈 guardamos tasas desde backend
   const navigate = useNavigate();
-
+console.log("HOY raw:", new Date());
+console.log("HOY ISO:", new Date().toISOString());
+console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
   // 🔹 Obtener tasas al cargar
   useEffect(() => {
     const fetchTasas = async () => {
       try {
-        const res = await axios.get("http://192.168.0.115:3001/tasa"); // 👈 endpoint para traer todas las tasas
+        const res = await axios.get("http://192.168.0.147:3001/tasa"); // 👈 endpoint para traer todas las tasas
         const tasasObj = {};
         res.data.forEach(t => {
           tasasObj[t.tipo] = parseFloat(t.tasaAnual);
@@ -49,7 +52,7 @@ const PrestamoForm = () => {
 
   const buscarUsuarioPorDni = async () => {
     try {
-      const res = await axios.post('http://192.168.0.115:3001/buscar-dni', { dni });
+      const res = await axios.post('http://192.168.0.147:3001/buscar-dni', { dni });
       const user = res.data;
 
       setUserId(user.id);
@@ -87,7 +90,7 @@ const PrestamoForm = () => {
         tipoTasa,
       };
 
-      await axios.post('http://192.168.0.115:3001/newprestamo', prestamoData);
+      await axios.post('http://192.168.0.147:3001/newprestamo', prestamoData);
 
       await Swal.fire({
         icon: 'success',
@@ -137,20 +140,30 @@ const montoPorCuota = valorCuota;
 
     const cuotasSimuladas = [];
     for (let i = 0; i < parseInt(cuotas); i++) {
-      const vencimiento = new Date(fecha);
-      vencimiento.setMonth(vencimiento.getMonth() + i + 1);
+  const [year, month, day] = fecha.split("-");
+  const vencimiento = new Date(year, month - 1, day);
+
+  vencimiento.setMonth(vencimiento.getMonth() + i + 1);
 
       cuotasSimuladas.push({
         numeroCuota: i + 1,
-        fechaVencimiento: vencimiento.toISOString().split("T")[0],
+        fechaVencimiento: vencimiento.toLocaleDateString("sv-SE"),
         monto: montoPorCuota.toFixed(2),
       });
     }
 
+    const formatearNumero = (valor) => {
+  if (!valor) return "0";
+  return Number(valor).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
     let detalleCuotas = cuotasSimuladas
       .map(
         (c) =>
-          `Cuota ${c.numeroCuota}: $${c.monto} (Vence: ${c.fechaVencimiento})`
+          `Cuota ${c.numeroCuota}: $${formatearNumero(c.monto)} (Vence: ${c.fechaVencimiento})`
       )
       .join("<br/>");
 
@@ -158,7 +171,7 @@ const montoPorCuota = valorCuota;
       icon: "info",
       title: "Simulación de Préstamo",
       html: `
-        <b>Monto solicitado:</b> $${monto}<br/>
+        <b>Monto solicitado:</b> $${formatearNumero(monto)}<br/>
         <b>Tasa anual:</b> ${tasaAnual}%<br/>
         <b>Monto final :</b> $${montoFinal.toFixed(2)}<br/>
         <b>Cantidad de cuotas:</b> ${cuotas}<br/><br/>
@@ -202,7 +215,11 @@ const montoPorCuota = valorCuota;
             <Input
               type="date"
               value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              onChange={(e) => {
+  console.log("Fecha seleccionada:", e.target.value);
+  setFecha(e.target.value);
+}}
+              
             />
           </FormControl>
 

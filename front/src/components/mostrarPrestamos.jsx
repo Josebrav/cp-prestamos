@@ -25,6 +25,7 @@ import {
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 
 
 export default function MostrarPrestamos() {
@@ -33,6 +34,7 @@ export default function MostrarPrestamos() {
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [cuotas, setCuotas] = useState([]);
   const [prestamoSeleccionado, setPrestamoSeleccionado] = useState(null);
+   const navigate = useNavigate();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -40,7 +42,7 @@ export default function MostrarPrestamos() {
 
   const fetchPrestamos = async () => {
     try {
-      const { data } = await axios.get('http://192.168.0.115:3001/prestamos/todos');
+      const { data } = await axios.get('http://192.168.0.147:3001/prestamos/todos');
       setPrestamos(data);
     } catch (error) {
       console.error('Error al obtener préstamos:', error);
@@ -55,7 +57,7 @@ export default function MostrarPrestamos() {
 
   const handleEstado = async (id, nuevoEstado) => {
     try {
-      await axios.put(`http://192.168.0.115:3001/actualizarprestamo/${id}/estado`, {
+      await axios.put(`http://192.168.0.147:3001/actualizarprestamo/${id}/estado`, {
         estado: nuevoEstado,
       });
       Swal.fire('Actualizado', `Préstamo marcado como "${nuevoEstado}"`, 'success');
@@ -74,12 +76,16 @@ export default function MostrarPrestamos() {
   };
 
   // 🔹 Calcula el monto pendiente (suma de cuotas no pagadas)
-  const calcularMontoPendiente = (cuotas = []) => {
-    return cuotas
-      .filter((c) => c.estado !== 'pagada')
-      .reduce((acc, c) => acc + Number(c.montoConInteres || c.monto), 0)
-      .toFixed(2);
-  };
+ const calcularMontoPendiente = (cuotas = []) => {
+  const total = cuotas
+    .filter((c) => c.estado !== 'pagada')
+    .reduce((acc, c) => acc + Number(c.montoConInteres || c.monto), 0);
+
+  return total.toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
   // 🔹 Calcula cuotas pagadas/total y vencidas
   const calcularInfoCuotas = (cuotas = []) => {
@@ -102,6 +108,7 @@ export default function MostrarPrestamos() {
       </Center>
     );
   }
+ 
 
   return (
     <Box
@@ -116,6 +123,13 @@ export default function MostrarPrestamos() {
       p={6}
       pb={"140px"}
     >
+      <Button
+        mb={4}
+        colorScheme="gray"
+        onClick={() => navigate(-1)}
+      >
+        ← Volver
+      </Button>
       <Heading mb={4} fontSize="2xl" textAlign="center">
         Lista de Préstamos
       </Heading>

@@ -15,7 +15,7 @@ import axios from "axios";
 // import recibo from "../assets/recibo2.jpg";
 import { numeroALetras } from "../utils/numerosALetras";
 
-const API_BASE = "http://192.168.0.115:3001";
+const API_BASE = "http://192.168.0.147:3001";
 
 export default function VerCuota() {
   const { id } = useParams();
@@ -35,6 +35,8 @@ export default function VerCuota() {
   const [montoRecibido, setMontoRecibido] = useState(""); // string para no romper mientras escribe
   const [montoCalculado, setMontoCalculado] = useState(0);
   const [montoEnLetras, setMontoEnLetras] = useState("");
+
+  const [pagoRealizado, setPagoRealizado] = useState(false);
 
   // helper: parsear números (acepta "123,45" y "123.45")
   const val = (x) => {
@@ -88,7 +90,7 @@ export default function VerCuota() {
     };
   }, [cuota]);
 
-  const cuotaPagada = cuota?.estado === "pagada";
+  const cuotaPagada = val(cuota?.montoPagado) >= montoCalculado;
 
   // ----- Recalcular montoCalculado cada vez que cambian datos relevantes -----
   useEffect(() => {
@@ -111,6 +113,7 @@ export default function VerCuota() {
     const interesPorCuota = finalPorCuota - capitalPorCuota;
 
     let monto = 0;
+    
 
     if (estaVencida()) {
       // Si la cuota ya está vencida: usar montoConInteres si viene; si no, calcular mora.
@@ -145,14 +148,20 @@ export default function VerCuota() {
         }
       }
     }
+    // 👇 RESTAR LO YA PAGADO (CLAVE)
+const yaPagado = val(cuota.montoPagado);
+monto = monto - yaPagado;
+
+// evitar negativos
+if (monto < 0) monto = 0;
 
     const montoRounded = Math.round(monto * 100) / 100;
     setMontoCalculado(montoRounded);
 
     // Si no hay monto escrito a mano o se cambió la quita, sincronizamos el input
-    if (!montoRecibido || quitaSeleccionada) {
-      setMontoRecibido(montoRounded.toFixed(2));
-    }
+ if (!pagoRealizado && (!montoRecibido || quitaSeleccionada)) {
+  setMontoRecibido(montoRounded.toFixed(2));
+}
   }, [cuota, quitaSeleccionada]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mostrar cantidad final que se imprime / muestra:
@@ -170,11 +179,13 @@ export default function VerCuota() {
   // Sincronizar input cuando llega cuota o cambia calculado
   useEffect(() => {
     if (!cuota) return;
-    if (cuotaPagada) {
-      setMontoRecibido(val(cuota.montoPagado).toFixed(2));
-    } else {
-      setMontoRecibido((val(montoCalculado) || 0).toFixed(2));
-    }
+    if (pagoRealizado) return; // 👈 CLAVE
+
+if (cuotaPagada) {
+  setMontoRecibido(val(cuota.montoPagado).toFixed(2));
+} else {
+  setMontoRecibido((val(montoCalculado) || 0).toFixed(2));
+}
   }, [cuota, cuotaPagada, montoCalculado]);
 
   // ----- Registrar pago + incrementar nControl -----
@@ -182,7 +193,9 @@ export default function VerCuota() {
     if (!cuota) return;
 
     const pago = val(montoRecibido);
-    const hoyISO = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    setMontoRecibido(pago.toFixed(2));
+    const hoyISO = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+   const esPagoParcialSinQuita = pago < montoCalculado && !quitaSeleccionada;
 
     let interes = 0;
     if (estaVencida()) {
@@ -217,27 +230,30 @@ export default function VerCuota() {
 
     try {
       // 1) Registrar pago (si tu backend acepta numeroControl, lo guardamos para auditoría)
-      await axios.post(`${API_BASE}/cuotas/${id}/pago`, {
-        montoPagado: pago,
-        fechaPago: hoyISO,
-        interesPagado: interes,
-        quitaAplicada: !!quitaSeleccionada,
-        numeroControl: numeroControlUsado, // opcional pero recomendado
-      });
+     await axios.post(`${API_BASE}/cuotas/${id}/pago`, {
+  montoPagado: pago,
+  fechaPago: hoyISO,
+  interesPagado: interes,
+  quitaAplicada: !!quitaSeleccionada,
+  numeroControl: numeroControlUsado,
+  registrarPagoCuota: esPagoParcialSinQuita, // 👈 CLAVE
+});
 
       // 2) Incrementar nControl global
       await axios.post(`${API_BASE}/control/sumar`);
 
       // 3) Feedback y estado local
       alert("✅ Pago registrado");
-      setCuota((prev) => ({
-        ...prev,
-        estado: "pagada",
-        fechaPago: hoyISO,
-        interesPagado: interes,
-        montoPagado: pago,
-        numeroControl: numeroControlUsado,
-      }));
+      setPagoRealizado(true);
+     setCuota((prev) => ({
+  ...prev,
+  estado: "pagada",
+  fechaPago: hoyISO,
+  interesPagado: interes,
+  montoPagado: pago,
+  montoConInteres: pago, // 👈 clave para consistencia
+  numeroControl: numeroControlUsado,
+}));
 
       // 4) Actualizar contador local (para próxima boleta)
       setNControlActual((prev) => (prev == null ? null : prev + 1));
@@ -271,9 +287,9 @@ export default function VerCuota() {
     : nControlSiguiente;
 
   return (
-    <Box>
+    <Box bgColor={"white"}>
       {/* Panel superior (no imprimible) */}
-      {!(montoMenor > 10 && displayAmount > montoMenor) && (
+    {!(montoMenor > 10 && cuotaPagada) && (
         <Flex
           className="no-print"
           bg="gray.800"
@@ -319,7 +335,7 @@ export default function VerCuota() {
             </>
           )}
         </Flex>
-      )}
+      )}  
 
       {/* Boletas duplicadas */}
       <Box w="100%" maxW="100%" className="screen-preview">
@@ -370,11 +386,9 @@ export default function VerCuota() {
                 {montoEnLetras}
               </Text>
 
-              <Text position="absolute" top="400px" left="150px" fontWeight="bold">
-                {montoMenor < 10 && displayAmount > montoMenor
-                  ? `$ ${val(displayAmount).toLocaleString("es-AR")}`
-                  : `$${val(montoMenor).toLocaleString("es-AR")}`}
-              </Text>
+            <Text position="absolute" top="400px" left="150px" fontWeight="bold">
+  ${val(displayAmount).toLocaleString("es-AR")}
+</Text>
             </Box>
           </Box>
         ))}

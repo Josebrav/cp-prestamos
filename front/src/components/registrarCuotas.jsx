@@ -38,7 +38,7 @@ export default function RegistrarCuotas() {
 
   const buscarUsuario = async () => {
     try {
-      const { data } = await axios.post("http://192.168.0.115:3001/buscar-dni", { dni });
+      const { data } = await axios.post("http://192.168.0.147:3001/buscar-dni", { dni });
 
       const prestamosActivos =
         data.Prestamos?.filter((p) =>
@@ -90,7 +90,7 @@ export default function RegistrarCuotas() {
 
   const cambiarEstadoCuota = async (cuotaId, nuevoEstado) => {
     try {
-      await axios.put(`http://192.168.0.115:3001/cuotas/${cuotaId}/estado`, {
+      await axios.put(`http://192.168.0.147:3001/cuotas/${cuotaId}/estado`, {
         estado: nuevoEstado,
       });
       setPrestamos((prev) =>

@@ -11,15 +11,20 @@ import {
   Heading,
   Spinner,
   VStack,
-  Text
+  Text,
+  Button
 } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
+import { FiPrinter } from "react-icons/fi";
 
-const API_BASE = "http://192.168.0.115:3001";
+
+
+const API_BASE = "http://192.168.0.147:3001";
 
 export default function TotalAcumulado() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-
+const navigate = useNavigate();
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -46,6 +51,62 @@ export default function TotalAcumulado() {
   // Calcular total
   const totalMonto = data.reduce((acc, item) => acc + Number(item.montoRestante), 0);
 
+  const handlePrint = () => {
+  const contenido = document.getElementById("print-area").innerHTML;
+
+  const ventana = window.open("", "", "width=900,height=700");
+
+  ventana.document.write(`
+    <html>
+      <head>
+        <title>Reporte</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+
+          body {
+            font-family: Arial;
+            margin: 0;
+            padding: 0;
+          }
+
+          .container {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* 🔥 CLAVE */
+          }
+
+          th, td {
+            border: 1px solid black;
+            padding: 5px;
+            font-size: 11px; /* 🔥 achica un poco */
+            word-wrap: break-word;
+          }
+
+          h1, h2 {
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          ${contenido}
+        </div>
+      </body>
+    </html>
+  `);
+
+  ventana.document.close();
+  ventana.focus();
+  ventana.print();
+};
   return (
      <Box
       w="80%"
@@ -59,8 +120,24 @@ export default function TotalAcumulado() {
       borderWidth="1px"
        borderTopRadius={0}
       p={[4, 6, 8]}   // padding responsive
+        id="print-area"
     >
-    
+    <Button
+  mb={4}
+  colorScheme="gray"
+  onClick={() => navigate(-1)}
+>
+  ← Volver
+</Button>
+  <Button
+  mb={4}
+  ml={2}
+  colorScheme="blue"
+  leftIcon={<FiPrinter />}
+  onClick={handlePrint}
+>
+  Imprimir
+</Button>
       <VStack align="stretch" spacing={4}>
         {/* Título del reporte */}
         <Heading size="lg" mb={4} textAlign="center">
@@ -96,6 +173,7 @@ export default function TotalAcumulado() {
           <Text fontWeight="bold" fontSize="lg" mr={"10%"}>
             TOTAL = ${totalMonto.toLocaleString()}
           </Text>
+          
         </Box>
       </VStack>
     </Box>

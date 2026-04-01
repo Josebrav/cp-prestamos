@@ -43,7 +43,7 @@ const RegistroUsuario = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://192.168.0.115:3001/registro", {
+      const res = await fetch("http://192.168.0.147:3001/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -102,6 +102,13 @@ const RegistroUsuario = () => {
     maxW="1200px"
     mx="auto"      // centra horizontalmente
   >
+    <Button
+  mb={4}
+  colorScheme="gray"
+  onClick={() => navigate(-1)}
+>
+  ← Volver
+</Button>
         <Heading mb={6} textAlign="center" color="teal.500">
           Registro de Usuario
         </Heading>
