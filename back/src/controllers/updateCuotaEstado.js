@@ -6,7 +6,7 @@ const updateCuotaEstado = async (id, nuevoEstado) => {
     throw new Error('Faltan parámetros requeridos');
   }
 
-  const estadosValidos = ['al dia', 'vencida', 'pagada'];
+  const estadosValidos = ['al dia', 'vencida', 'pagada','cancelada'];
   if (!estadosValidos.includes(nuevoEstado)) {
     throw new Error('Estado inválido');
   }

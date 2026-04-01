@@ -1,4 +1,4 @@
-const { Prestamo, User, Cuota } = require('../database');
+const { Prestamo, User, Cuota, PagoCuota } = require('../database');
 
 const getPrestamo = async (id) => {
   const prestamo = await Prestamo.findByPk(id, {
@@ -10,6 +10,11 @@ const getPrestamo = async (id) => {
       {
         model: Cuota,
         as: 'cuotas',
+        include: [
+          {
+            model: PagoCuota
+          }
+        ]
       }
     ]
   });

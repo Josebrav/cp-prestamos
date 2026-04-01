@@ -10,7 +10,7 @@ const { actualizarPrestamosVencidos } = require('../src/controllers/calcularCuot
 })();
 
 // 🔹 Programar ejecución diaria
-cron.schedule('00 12 * * *', async () => {
+cron.schedule('*/5 * * * *', async () => {
   const cantidad = await actualizarPrestamosVencidos();
   console.log(`🔁 Cron: Se actualizaron ${cantidad} préstamos vencidos.`);
 }, {

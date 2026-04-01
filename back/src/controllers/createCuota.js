@@ -5,7 +5,9 @@ const createCuotas = async ({ prestamoId, fechaInicio, montoBase, cantidadCuotas
   if (!prestamoId || !fechaInicio || !montoBase || !cantidadCuotas) {
     throw new Error('Faltan datos obligatorios para crear las cuotas');
   }
-
+console.log("📅 fechaInicio raw:", fechaInicio);
+console.log("📅 dayjs(fechaInicio):", dayjs(fechaInicio).format());
+console.log("📅 dayjs UTC:", dayjs(fechaInicio).toISOString());
   // NO aplicar 15% de nuevo, ya viene aplicado en montoBase
   const montoPorCuota = parseFloat(montoBase) / cantidadCuotas;
 
@@ -21,9 +23,20 @@ const createCuotas = async ({ prestamoId, fechaInicio, montoBase, cantidadCuotas
 
   for (let i = 0; i < cantidadCuotas; i++) {
     // ✅ primera cuota vence 1 mes después
-    const vencimiento = dayjs(fechaInicio)
-      .add(i + 1, 'month')
-      .format('YYYY-MM-DD');
+ const fechaBase = dayjs(fechaInicio);
+const diaOriginal = fechaBase.date();
+
+const fechaTemp = fechaBase.add(i + 1, 'month');
+
+// último día del mes
+const ultimoDiaMes = fechaTemp.daysInMonth();
+
+// usar el menor entre el día original y el máximo posible
+const diaFinal = Math.min(diaOriginal, ultimoDiaMes);
+
+const vencimiento = fechaTemp
+  .date(diaFinal)
+  .format('YYYY-MM-DD');
 
     cuotas.push({
       prestamoId,
@@ -33,6 +46,12 @@ const createCuotas = async ({ prestamoId, fechaInicio, montoBase, cantidadCuotas
       monto: montoPorCuota.toFixed(2),
       estado: 'al dia'
     });
+    console.log("➡️ Iteración:", i);
+console.log("fechaTemp:", fechaTemp.format());
+console.log("diaOriginal:", diaOriginal);
+console.log("ultimoDiaMes:", ultimoDiaMes);
+console.log("diaFinal:", diaFinal);
+console.log("vencimiento FINAL:", vencimiento);
   }
 
   // Crear en base de datos

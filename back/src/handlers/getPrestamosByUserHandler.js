@@ -1,5 +1,5 @@
 // handlers/getPrestamosByUserHandler.js
-const { Prestamo, Cuota, User } = require('../database');
+const { Prestamo, Cuota, User,PagoCuota } = require('../database');
 
 const getPrestamosByUserHandler = async (req, res) => {
   const { id } = req.params;
@@ -9,9 +9,14 @@ const getPrestamosByUserHandler = async (req, res) => {
       where: { userId: id }, // ✅ FK correcta
       include: [
         {
-          model: Cuota,
-          as: 'cuotas', // ✅ este sí tiene alias
-        },
+  model: Cuota,
+  as: "cuotas",
+  include: [
+    {
+      model: PagoCuota // 👈 ESTO FALTABA
+    }
+  ]
+},
         {
           model: User, // ✅ sin alias
         },

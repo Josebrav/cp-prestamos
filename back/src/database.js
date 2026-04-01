@@ -44,12 +44,15 @@ let capsEntries = entries.map(([modelName, model]) => [
 sequelize.models = Object.fromEntries(capsEntries);
 
 // Relaciones (adaptalas a tus modelos actuales)
-const { User, Prestamo, Cuota } = sequelize.models;
+const { User, Prestamo, Cuota, PagoCuota } = sequelize.models;
 
 User.hasMany(Prestamo, { foreignKey: 'userId' });
 Prestamo.belongsTo(User, { foreignKey: 'userId' });
 Prestamo.hasMany(Cuota, { foreignKey: 'prestamoId', as: 'cuotas' });
 Cuota.belongsTo(Prestamo, { foreignKey: 'prestamoId' }); // ❌ sin 'as'
+// 🔹 Pagos parciales
+Cuota.hasMany(PagoCuota, { foreignKey: 'cuotaId' });
+PagoCuota.belongsTo(Cuota, { foreignKey: 'cuotaId' });
 
 module.exports = {
   ...sequelize.models,

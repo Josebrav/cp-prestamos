@@ -34,10 +34,11 @@ const postPrestamo = async (prestamoData) => {
   const montoFinalCalculado = vCuota * cuotas;
 
   // 🔹 Calcular numeroControl (incremental por usuario)
-  const ultimoPrestamo = await Prestamo.findOne({
-    where: { userId },
-    order: [['numeroControl', 'DESC']],
-  });
+  
+   const ultimoPrestamo = await Prestamo.findOne({
+  order: [['numeroControl', 'DESC']],
+});
+   
   const numeroControl = ultimoPrestamo ? ultimoPrestamo.numeroControl + 1 : 1;
 
   // Crear el préstamo

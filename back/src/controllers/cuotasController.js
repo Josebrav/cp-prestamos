@@ -1,4 +1,4 @@
-const { Cuota, Prestamo, User } = require("../database");
+const { Cuota, Prestamo, User, PagoCuota } = require("../database");
 const { Op } = require("sequelize");
 
 // Trae datos de una cuota
@@ -12,8 +12,13 @@ const getCuotaById = async (req, res) => {
             { model: User },
             { model: Cuota, as: "cuotas" }, 
       ]
+    
+     },
+    {
+      model: PagoCuota, // 👈 ESTO ES LO QUE FALTA
     }
   ]
+  
   });
     if (!cuota) return res.status(404).json({ error: "Cuota no encontrada" });
     res.json(cuota);
@@ -30,6 +35,15 @@ const pagarCuota = async (req, res) => {
 
     const cuota = await Cuota.findByPk(id, { include: [Prestamo] });
     if (!cuota) return res.status(404).json({ error: "Cuota no encontrada" });
+
+    // 🔹 Registrar SIEMPRE el pago (historial)
+if (req.body.registrarPagoCuota) {
+  await PagoCuota.create({
+    cuotaId: id,
+    monto: montoPagado,
+    fechaPago: fechaPago || new Date().toISOString().split("T")[0],
+  });
+}
 
     // monto a cobrar: si hay montoConInteres lo usamos, si no monto base
     let montoActualizado = cuota.montoConInteres || cuota.monto;

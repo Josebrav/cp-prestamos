@@ -27,10 +27,15 @@ const getPrestamosByMonth = async (year, month, soloACobrar = false) => {
         attributes: ["id", "name", "surname", "dni"]
       },
       {
-        model: Cuota,
-        as: "cuotas",        // <--- IMPORTANTE: usar el mismo alias que en el modelo
-        attributes: ["id", "numeroCuota", "monto", "montoConInteres", "estado"]
-      }
+  model: Cuota,
+  as: "cuotas",
+  attributes: ["id", "numeroCuota", "monto", "montoConInteres", "estado"],
+ //nclude: [
+   //
+     //odel: PagoCuota // 👈 ESTO FALTABA
+   //}
+ //]
+}
     ],
     order: [["fechaInicio", "ASC"]]
   });

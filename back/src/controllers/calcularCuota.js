@@ -81,9 +81,9 @@ const actualizarPrestamosVencidos = async () => {
 
     for (const cuota of prestamo.cuotas) {
       // Manejo según estado del préstamo
-      if (prestamo.estado === 'cancelado') {
-        cuota.estado = cuota.estado === 'pagada' ? 'pagada' : 'vencida';
-      } else if (prestamo.estado === 'pendiente') {
+     if (prestamo.estado === 'cancelado') {
+  cuota.estado = cuota.estado === 'pagada' ? 'pagada' : 'cancelada';
+}else if (prestamo.estado === 'pendiente') {
         cuota.estado = 'al dia';
       } else if (prestamo.estado === 'finalizado') {
         cuota.estado = 'pagada';

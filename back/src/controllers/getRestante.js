@@ -20,13 +20,13 @@ const getRestante = async (req, res) => {
             },
             estado: {
               [Op.ne]: "pagada", // solo cuotas pendientes
-            },
+            },  
           },
           required: true, // 👈 evita traer préstamos sin cuotas futuras
         },
         {
           model: User,
-          attributes: ["name", "surname"], // solo nombre y apellido
+          attributes: ["name", "surname", "dni"], // solo nombre y apellido
         },
       ],
     });
@@ -45,6 +45,7 @@ const getRestante = async (req, res) => {
         cuotasRestantes,
         montoRestante: montoRestante.toFixed(2),
         cliente: `${prestamo.User?.name || ""} ${prestamo.User?.surname || ""}`,
+        dni: prestamo.User?.dni || "-", 
       };
     });
 

@@ -4,54 +4,57 @@ const { Op } = require('sequelize');
 const getCuotasVencidasMes = async (req, res) => {
   try {
     const { year, month } = req.query;
-    console.log(year, month);
-    
 
     if (!year || !month) {
       return res.status(400).json({ error: "Debes enviar año y mes" });
     }
 
-    // Convertir a Number
-   const startDate = new Date(year, month - 1, 1); // primer día del mes
-  const endDate = new Date(year, month, 0);       // último día del mes
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
 
     const cuotas = await Cuota.findAll({
-  where: {
-    fechaVencimiento: {
-      [Op.between]: [startDate, endDate]
-    },
-   
-  },
-  include: [
-    {
-      model: Prestamo,
-      attributes: ['numeroControl'],
-      required: true, // Esto fuerza que solo traiga cuotas con préstamo
+      where: {
+        fechaVencimiento: {
+          [Op.between]: [startDate, endDate]
+        },
+        // ❌ sacamos estado de cuota
+      },
       include: [
         {
-          model: User,
-          attributes: ['name', 'surname']
+          model: Prestamo,
+          attributes: ['numeroControl', 'estado'],
+          required: true,
+
+          // 🔥 ACA ESTA LA CLAVE
+          where: {
+            estado: "al dia"
+          },
+
+          include: [
+            {
+              model: User,
+              attributes: ['name', 'surname']
+            }
+          ]
         }
-      ]
-    }
-  ],
-  order: [['fechaVencimiento', 'ASC']]
-});
+      ],
+      order: [['fechaVencimiento', 'ASC']]
+    });
 
     const resultado = cuotas.map(c => ({
       id: c.id,
       cliente: `${c.Prestamo.User.name} ${c.Prestamo.User.surname}`,
       numeroControl: c.Prestamo.numeroControl,
       monto: c.montoConInteres || c.monto,
-      fechaVencimiento: c.fechaVencimiento
+      fechaVencimiento: c.fechaVencimiento,
+      estadoPrestamo: c.Prestamo.estado // opcional
     }));
-    console.log(resultado, cuotas);
-    
 
     return res.status(200).json(resultado);
+
   } catch (err) {
     console.error("Error en getCuotasVencidasMes:", err);
-    return res.status(500).json({ error: "Error al obtener cuotas vencidas" });
+    return res.status(500).json({ error: "Error al obtener cuotas" });
   }
 };
 

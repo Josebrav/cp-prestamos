@@ -34,7 +34,7 @@ module.exports = (sequelize) => {
       defaultValue: null,
     },
     estado: {
-      type: DataTypes.ENUM('al dia', 'vencida', 'pagada'),
+      type: DataTypes.ENUM('al dia', 'vencida', 'pagada','cancelada'),
       defaultValue: 'al dia',
     },
     fechaPago: {
@@ -58,6 +58,7 @@ montoPagado: {    // <-- Nuevo campo
 
   Cuota.associate = (models) => {
     Cuota.belongsTo(models.Prestamo, { foreignKey: 'prestamoId' });
+    Cuota.hasMany(models.PagoCuota, { foreignKey: 'cuotaId' });
   };
 
   return Cuota;
