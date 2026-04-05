@@ -22,6 +22,7 @@ import TotalAcumulado from './components/totalAcumulado';
 import VerCuota from './components/verCuota';
 import Contrato from './components/contrato';
 
+
 function App() {
   const location = useLocation();
   const hideHeader = location.pathname.startsWith("/cuota/") || location.pathname.startsWith("/contrato/");

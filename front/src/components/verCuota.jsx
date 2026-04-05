@@ -15,6 +15,7 @@ import axios from "axios";
 // import recibo from "../assets/recibo2.jpg";
 import { numeroALetras } from "../utils/numerosALetras";
 
+
 const API_BASE = "http://192.168.0.147:3001";
 
 export default function VerCuota() {
@@ -35,8 +36,8 @@ export default function VerCuota() {
   const [montoRecibido, setMontoRecibido] = useState(""); // string para no romper mientras escribe
   const [montoCalculado, setMontoCalculado] = useState(0);
   const [montoEnLetras, setMontoEnLetras] = useState("");
-
   const [pagoRealizado, setPagoRealizado] = useState(false);
+
 
   // helper: parsear números (acepta "123,45" y "123.45")
   const val = (x) => {
@@ -64,21 +65,21 @@ export default function VerCuota() {
 
   // ----- Fetch nControl global -----
   useEffect(() => {
-  setLoadingNControl(true);
-  axios
-    .get(`${API_BASE}/control`)
-    .then((res) => {
-      const curr = Number(
-        res.data?.numero ?? res.data?.numeroControl ?? 0
-      );
-      setNControlActual(curr);
-      setNControlSiguiente(curr + 1);
-    })
-    .catch((err) => {
-      console.error("Error al obtener nControl:", err);
-    })
-    .finally(() => setLoadingNControl(false));
-}, []);
+    setLoadingNControl(true);
+    axios
+      .get(`${API_BASE}/control`)
+      .then((res) => {
+        const curr = Number(
+          res.data?.numero ?? res.data?.numeroControl ?? 0
+        );
+        setNControlActual(curr);
+        setNControlSiguiente(curr + 1);
+      })
+      .catch((err) => {
+        console.error("Error al obtener nControl:", err);
+      })
+      .finally(() => setLoadingNControl(false));
+  }, []);
 
   // ----- Helpers de cuota -----
   const estaVencida = useMemo(() => {
@@ -90,112 +91,35 @@ export default function VerCuota() {
     };
   }, [cuota]);
 
-  const cuotaPagada = val(cuota?.montoPagado) >= montoCalculado;
+  const cuotaPagada = cuota?.estado === "pagada";
 
-  // ----- Recalcular montoCalculado cada vez que cambian datos relevantes -----
+
+
+  // Mostrar cantidad final que se imprime / muestra:
+  const displayAmount = val(montoRecibido);
   useEffect(() => {
     if (!cuota) return;
 
-    const prestamo = cuota.Prestamo || {};
-    const cantidadCuotas = prestamo.cuotas?.length || 1;
+    // 🚫 Si ya se pagó, NO tocar el input
+    if (pagoRealizado) return;
 
-    // Determinar finalPorCuota (valor "base" sin mora)
-    let finalPorCuota = 0;
-    if (val(prestamo.montoFinal) > 0) {
-      finalPorCuota = val(prestamo.montoFinal) / cantidadCuotas;
-    } else if (val(cuota.monto) > 0) {
-      finalPorCuota = val(cuota.monto);
-    } else {
-      finalPorCuota = val(prestamo.monto) / cantidadCuotas;
-    }
+    const montoFinal = val(cuota.montoConInteres);
 
-    const capitalPorCuota = val(prestamo.monto) / cantidadCuotas;
-    const interesPorCuota = finalPorCuota - capitalPorCuota;
+    setMontoCalculado(montoFinal);
+    setMontoRecibido(montoFinal.toFixed(2));
 
-    let monto = 0;
-    
-
-    if (estaVencida()) {
-      // Si la cuota ya está vencida: usar montoConInteres si viene; si no, calcular mora.
-      if (val(cuota.montoConInteres) > 0) {
-        monto = val(cuota.montoConInteres);
-      } else {
-        const hoy = new Date();
-        const venc = new Date(cuota.fechaVencimiento);
-        const diffMs =
-          new Date(hoy.toDateString()) - new Date(venc.toDateString());
-        const diasAtraso = Math.max(
-          0,
-          Math.floor(diffMs / (1000 * 60 * 60 * 24))
-        );
-
-        const tasaAnual = val(prestamo.tasaMoraAnual) / 100; // ej. 50 => 0.5
-        const tasaDiaria = tasaAnual / 365;
-        const interesMora = finalPorCuota * tasaDiaria * diasAtraso;
-
-        monto = finalPorCuota + interesMora;
-      }
-    } else {
-      // No vencida: monto base = finalPorCuota.
-      monto = finalPorCuota;
-      // aplicar quita (si hay) sobre la PORCIÓN INTERÉS
-      if (quitaSeleccionada) {
-        const quita = quitas.find((q) => q.tipo === quitaSeleccionada);
-        if (quita) {
-          const porc = val(quita.porcentaje);
-          const descuento = interesPorCuota * (porc / 100);
-          monto = finalPorCuota - descuento;
-        }
-      }
-    }
-    // 👇 RESTAR LO YA PAGADO (CLAVE)
-const yaPagado = val(cuota.montoPagado);
-monto = monto - yaPagado;
-
-// evitar negativos
-if (monto < 0) monto = 0;
-
-    const montoRounded = Math.round(monto * 100) / 100;
-    setMontoCalculado(montoRounded);
-
-    // Si no hay monto escrito a mano o se cambió la quita, sincronizamos el input
- if (!pagoRealizado && (!montoRecibido || quitaSeleccionada)) {
-  setMontoRecibido(montoRounded.toFixed(2));
-}
-  }, [cuota, quitaSeleccionada]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Mostrar cantidad final que se imprime / muestra:
-  const displayAmount = useMemo(() => {
-    if (!cuota) return 0;
-    if (cuotaPagada) return val(cuota.montoPagado);
-    return val(montoRecibido) > 0 ? val(montoRecibido) : montoCalculado;
-  }, [cuota, cuotaPagada, montoRecibido, montoCalculado]);
-
+  }, [cuota, pagoRealizado]);
   // Letras del monto
   useEffect(() => {
     setMontoEnLetras(numeroALetras(displayAmount));
   }, [displayAmount]);
-
-  // Sincronizar input cuando llega cuota o cambia calculado
-  useEffect(() => {
-    if (!cuota) return;
-    if (pagoRealizado) return; // 👈 CLAVE
-
-if (cuotaPagada) {
-  setMontoRecibido(val(cuota.montoPagado).toFixed(2));
-} else {
-  setMontoRecibido((val(montoCalculado) || 0).toFixed(2));
-}
-  }, [cuota, cuotaPagada, montoCalculado]);
 
   // ----- Registrar pago + incrementar nControl -----
   const handlePago = async () => {
     if (!cuota) return;
 
     const pago = val(montoRecibido);
-    setMontoRecibido(pago.toFixed(2));
-    const hoyISO = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
-   const esPagoParcialSinQuita = pago < montoCalculado && !quitaSeleccionada;
+    const hoyISO = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     let interes = 0;
     if (estaVencida()) {
@@ -228,32 +152,30 @@ if (cuotaPagada) {
     // Número de control visible en la boleta
     const numeroControlUsado = nControlSiguiente;
 
+
     try {
       // 1) Registrar pago (si tu backend acepta numeroControl, lo guardamos para auditoría)
-     await axios.post(`${API_BASE}/cuotas/${id}/pago`, {
-  montoPagado: pago,
-  fechaPago: hoyISO,
-  interesPagado: interes,
-  quitaAplicada: !!quitaSeleccionada,
-  numeroControl: numeroControlUsado,
-  registrarPagoCuota: esPagoParcialSinQuita, // 👈 CLAVE
-});
+      await axios.post(`${API_BASE}/cuotas/${id}/pago`, {
+        montoPagado: pago,
+        fechaPago: hoyISO,
+        interesPagado: interes,
+        quitaAplicada: !!quitaSeleccionada,
+        numeroControl: numeroControlUsado,
+        registrarPagoCuota: true, // 🔥 CLAVE
+      });
 
       // 2) Incrementar nControl global
       await axios.post(`${API_BASE}/control/sumar`);
 
+
+
+
+
       // 3) Feedback y estado local
       alert("✅ Pago registrado");
       setPagoRealizado(true);
-     setCuota((prev) => ({
-  ...prev,
-  estado: "pagada",
-  fechaPago: hoyISO,
-  interesPagado: interes,
-  montoPagado: pago,
-  montoConInteres: pago, // 👈 clave para consistencia
-  numeroControl: numeroControlUsado,
-}));
+      const res = await axios.get(`${API_BASE}/cuotas/${id}`);
+      setCuota(res.data);
 
       // 4) Actualizar contador local (para próxima boleta)
       setNControlActual((prev) => (prev == null ? null : prev + 1));
@@ -286,10 +208,13 @@ if (cuotaPagada) {
     ? cuota?.numeroControl ?? nControlSiguiente
     : nControlSiguiente;
 
+  const totalPagado = (cuota.PagoCuota || [])
+    .reduce((acc, p) => acc + val(p.monto), 0);
+
   return (
-    <Box bgColor={"white"}>
+    <Box backgroundColor={"white"}>
       {/* Panel superior (no imprimible) */}
-    {!(montoMenor > 10 && cuotaPagada) && (
+      {!cuotaPagada && (
         <Flex
           className="no-print"
           bg="gray.800"
@@ -335,7 +260,7 @@ if (cuotaPagada) {
             </>
           )}
         </Flex>
-      )}  
+      )}
 
       {/* Boletas duplicadas */}
       <Box w="100%" maxW="100%" className="screen-preview">
@@ -386,9 +311,9 @@ if (cuotaPagada) {
                 {montoEnLetras}
               </Text>
 
-            <Text position="absolute" top="400px" left="150px" fontWeight="bold">
-  ${val(displayAmount).toLocaleString("es-AR")}
-</Text>
+              <Text position="absolute" top="400px" left="150px" fontWeight="bold">
+                ${val(displayAmount).toLocaleString("es-AR")}
+              </Text>
             </Box>
           </Box>
         ))}

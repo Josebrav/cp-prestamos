@@ -164,6 +164,8 @@ export default function VerPrestamos() {
     );
   }
 
+ 
+
   return (
     <Box
       w="80%"
@@ -175,6 +177,7 @@ export default function VerPrestamos() {
       mt={0}
       p={6}
       pb="140px"
+      
     >
       <Button
         mb={4}
@@ -203,13 +206,13 @@ export default function VerPrestamos() {
               {prestamos
                 .slice()
                 .sort((a, b) => {
-  // prioridad: pendientes primero
-  if (a.estado === "pendiente" && b.estado !== "pendiente") return -1;
-  if (a.estado !== "pendiente" && b.estado === "pendiente") return 1;
+                  // prioridad: pendientes primero
+                  if (a.estado === "pendiente" && b.estado !== "pendiente") return -1;
+                  if (a.estado !== "pendiente" && b.estado === "pendiente") return 1;
 
-  // después por numeroControl descendente
-  return (a.numeroControl || 0) - (b.numeroControl || 0);
-})
+                  // después por numeroControl descendente
+                  return (a.numeroControl || 0) - (b.numeroControl || 0);
+                })
                 .map((prestamo) => (
                   <AccordionItem
                     key={prestamo.id}
@@ -221,35 +224,35 @@ export default function VerPrestamos() {
                     <h2>
                       <AccordionButton _expanded={{ bg: "blue.50" }}>
                         <Box flex="1" textAlign="left">
-  <Text fontWeight="bold">
-    #{prestamo.numeroControl || prestamo.id}
-  </Text>
+                          <Text fontWeight="bold">
+                            #{prestamo.numeroControl || prestamo.id}
+                          </Text>
 
-  <Text fontSize="sm">
-    Monto: ${formatMoney(prestamo.monto)}
-  </Text>
+                          <Text fontSize="sm">
+                            Monto: ${formatMoney(prestamo.monto)}
+                          </Text>
 
-  <Text fontSize="sm">
-    Fecha: {new Date(prestamo.createdAt).toLocaleDateString("es-AR")}
-  </Text>
-</Box>
+                          <Text fontSize="sm">
+                            Fecha: {new Date(prestamo.fechaInicio).toLocaleDateString("es-AR")}
+                          </Text>
+                        </Box>
                         <AccordionIcon />
                       </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
                       <Box mb={4}>
-  <Text><b>Estado:</b> {prestamo.estado}</Text>
-  <Text>
-    <b>Monto pendiente:</b> $
-    {formatMoney(calcularMontoPendiente(prestamo.cuotas))}
-  </Text>
-  <Text>
-    <b>Monto final:</b> {formatMoney(prestamo.montoFinal ?? 0)}
-  </Text>
-  <Text>
-    <b>Cuotas:</b> {renderInfoCuotas(prestamo.cuotas)}
-  </Text>
-</Box>
+                        <Text><b>Estado:</b> {prestamo.estado}</Text>
+                        <Text>
+                          <b>Monto pendiente:</b> $
+                          {formatMoney(calcularMontoPendiente(prestamo.cuotas))}
+                        </Text>
+                        <Text>
+                          <b>Monto final:</b> {formatMoney(prestamo.montoFinal ?? 0)}
+                        </Text>
+                        <Text>
+                          <b>Cuotas:</b> {renderInfoCuotas(prestamo.cuotas)}
+                        </Text>
+                      </Box>
                       {prestamo.estado !== "cancelado" && (
                         <Box mt={2} display="flex" gap={2} flexWrap="wrap">
 
@@ -313,21 +316,21 @@ export default function VerPrestamos() {
                             )
                             .map((cuota, index, cuotasOrdenadas) => {
                               const num = cuota.numeroCuota ?? cuota.numero;
-const prestamoCancelado = prestamo.estado === "cancelado";
+                              const prestamoCancelado = prestamo.estado === "cancelado";
                               const isPaid = cuota.estado === "pagada";
                               const prevIsPaid =
                                 index > 0
                                   ? cuotasOrdenadas[index - 1].estado === "pagada"
                                   : false;
 
-                    const displayAmount = isPaid
-  ? cuota.montoPagado ??
-    cuota.montoConInteres ??
-    cuota.monto ??
-    0
-  : cuota.estado === "vencida"
-  ? cuota.monto ?? 0
-  : cuota.monto ?? 0;
+                              const displayAmount = isPaid
+                                ? cuota.montoPagado ??
+                                cuota.montoConInteres ??
+                                cuota.monto ??
+                                0
+                                : cuota.estado === "vencida"
+                                  ? cuota.monto ?? 0
+                                  : cuota.monto ?? 0;
 
                               const showLupa = isPaid;
                               const showPrinter =
@@ -365,14 +368,14 @@ const prestamoCancelado = prestamo.estado === "cancelado";
                                         colorScheme="orange"
                                         onClick={() => {
                                           const detalle = cuota.PagoCuota
-  .map(p => `
+                                            .map(p => `
     <p><b>Fecha:</b> ${new Date(p.fechaPago).toLocaleDateString("es-AR", {
-      timeZone: "UTC",
-    })}</p>
+                                              timeZone: "UTC",
+                                            })}</p>
     <p><b>Monto:</b> $${formatMoney(p.monto)}</p>
     <hr/>
   `)
-  .join("");
+                                            .join("");
 
                                           Swal.fire({
                                             title: `Pagos - Cuota ${num}`,
@@ -402,9 +405,9 @@ const prestamoCancelado = prestamo.estado === "cancelado";
                                             html: `
                                               <p><b>Fecha de pago:</b> ${cuota.fechaPago
                                                 ? new Date(cuota.fechaPago).toLocaleDateString("es-AR", {
-  timeZone: "UTC",
-})
-                                             
+                                                  timeZone: "UTC",
+                                                })
+
                                                 : "-"
                                               }</p>
                                               <p><b>Monto pagado:</b> $${formatMoney(
@@ -422,7 +425,7 @@ const prestamoCancelado = prestamo.estado === "cancelado";
                                   </Td>
 
                                   <Td>
-                                    {showPrinter && !prestamoCancelado && ( 
+                                    {showPrinter && !prestamoCancelado && (
                                       <IconButton
                                         aria-label="Imprimir cuota"
                                         icon={<FiPrinter />}
