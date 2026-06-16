@@ -43,13 +43,39 @@ const RegistroUsuario = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://192.168.0.147:3001/registro", {
+      // Validación simple en frontend
+      if (!formData.name.trim() || !formData.surname.trim() || !formData.dni.trim()) {
+        return toast({
+          title: "Datos incompletos",
+          description: "Nombre, apellido y DNI son obligatorios.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      const res = await fetch("http://192.168.1.48:3001/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error("Error al registrar usuario");
+      // Manejo específico si el backend responde que ya existe el DNI
+      if (res.status === 409) {
+        const data = await res.json();
+        return toast({
+          title: "DNI existente",
+          description: data?.error || "Ya existe un usuario con ese DNI.",
+          status: "error",
+          duration: 4000,
+          isClosable: true,
+        });
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Error al registrar usuario");
+      }
 
       toast({
         title: "Usuario registrado",
@@ -161,10 +187,7 @@ const RegistroUsuario = () => {
                 <option value="2">2</option>
               </Select>
             </FormControl>
-            <FormControl>
-              <FormLabel>Situación</FormLabel>
-              <Input name="situacion" value={formData.situacion} onChange={handleChange} />
-            </FormControl>
+       
             <FormControl>
               <FormLabel>Fecha de Nacimiento</FormLabel>
               <Input type="date" name="nacimiento" value={formData.nacimiento} onChange={handleChange} />

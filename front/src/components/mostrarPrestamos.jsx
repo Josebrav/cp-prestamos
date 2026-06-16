@@ -42,7 +42,7 @@ export default function MostrarPrestamos() {
 
   const fetchPrestamos = async () => {
     try {
-      const { data } = await axios.get('http://192.168.0.147:3001/prestamos/todos');
+      const { data } = await axios.get('http://192.168.1.48:3001/prestamos/todos');
       setPrestamos(data);
     } catch (error) {
       console.error('Error al obtener préstamos:', error);
@@ -57,7 +57,7 @@ export default function MostrarPrestamos() {
 
   const handleEstado = async (id, nuevoEstado) => {
     try {
-      await axios.put(`http://192.168.0.147:3001/actualizarprestamo/${id}/estado`, {
+      await axios.put(`http://192.168.1.48:3001/actualizarprestamo/${id}/estado`, {
         estado: nuevoEstado,
       });
       Swal.fire('Actualizado', `Préstamo marcado como "${nuevoEstado}"`, 'success');
@@ -100,6 +100,21 @@ export default function MostrarPrestamos() {
     estadoFiltro === 'todos'
       ? prestamos
       : prestamos.filter((p) => p.estado === estadoFiltro);
+
+  // Mapa de usuarios que tienen al menos un préstamo 'en legales'
+  const usuariosEnLegales = prestamos.reduce((acc, p) => {
+    const uid = p.User?.id;
+    if (!uid) return acc;
+    if (!acc[uid] && p.estado === 'en legales') acc[uid] = true;
+    return acc;
+  }, {});
+
+  // Mover préstamos 'cancelado' al final sin alterar el orden relativo de los demás
+  const prestamosMostrados = prestamosFiltrados.slice().sort((a, b) => {
+    if (a.estado === 'cancelado' && b.estado !== 'cancelado') return 1;
+    if (b.estado === 'cancelado' && a.estado !== 'cancelado') return -1;
+    return 0;
+  });
 
   if (loading) {
     return (
@@ -152,7 +167,7 @@ export default function MostrarPrestamos() {
       </Select>
 
       <Accordion allowMultiple>
-        {prestamosFiltrados.map((prestamo) => (
+        {prestamosMostrados.map((prestamo) => (
           <AccordionItem
             key={prestamo.id}
             bg={bgColor}
@@ -164,8 +179,18 @@ export default function MostrarPrestamos() {
           >
             <h2>
               <AccordionButton>
-                <Box flex="1" textAlign="left" fontWeight="bold" fontSize="lg">
-                  {prestamo.User?.name} {prestamo.User?.surname} - ${parseFloat(prestamo.monto).toLocaleString()}
+                <Box display="flex" alignItems="center" flex="1">
+                  <Box mr={4} w="90px" fontWeight="semibold" color="gray.600">
+                    N° {prestamo.numeroControl ?? '-'}
+                  </Box>
+                  <Box textAlign="left" fontWeight="bold" fontSize="lg">
+                    {prestamo.User?.name} {prestamo.User?.surname}
+                    {usuariosEnLegales[prestamo.User?.id] && (
+                      <Text as="span" ml={3} fontSize="sm" color="red.500" fontWeight="semibold">
+                        Tiene préstamos en legales
+                      </Text>
+                    )} - ${parseFloat(prestamo.monto).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Box>
                 </Box>
                 <Box
                   fontWeight="semibold"
@@ -191,7 +216,7 @@ export default function MostrarPrestamos() {
             <AccordionPanel pb={4}>
               <Stack spacing={2}>
                 <Text><b>Fecha Inicio:</b> {prestamo.fechaInicio}</Text>
-                <Text><b>Monto Final:</b> ${parseFloat(prestamo.montoFinal).toLocaleString()}</Text>
+                <Text><b>Monto Final:</b> ${parseFloat(prestamo.montoFinal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                
                 <Text><b>Tipo de Tasa:</b> {prestamo.tipoTasa}</Text>
                 <Text><b>Tasa Mora Anual:</b> {prestamo.tasaMoraAnual}%</Text>
@@ -220,13 +245,20 @@ export default function MostrarPrestamos() {
 
                 <HStack mt={4} spacing={3}>
                   {prestamo.estado !== 'cancelado' && (
-                    <Button
-                      colorScheme="red"
-                      size="sm"
-                      onClick={() => handleEstado(prestamo.id, 'cancelado')}
-                    >
-                      Cancelar
-                    </Button>
+                    (() => {
+                      const tienePagos = (prestamo.cuotas || []).some(c => (c.PagoCuota && c.PagoCuota.length > 0) || Number(c.montoPagado || 0) > 0);
+                      return (
+                        <Button
+                          colorScheme="red"
+                          size="sm"
+                          onClick={() => handleEstado(prestamo.id, 'cancelado')}
+                          isDisabled={tienePagos}
+                          title={tienePagos ? 'No se puede cancelar: existen pagos en este préstamo' : 'Finalizar préstamo'}
+                        >
+                          Cancelar
+                        </Button>
+                      );
+                    })()
                   )}
                   {prestamo.estado === 'pendiente' && (
                     <Button
@@ -272,7 +304,7 @@ export default function MostrarPrestamos() {
                       {Math.max(
                         parseFloat(cuota.monto) || 0,
                         parseFloat(cuota.montoConInteres) || 0
-                      ).toLocaleString()}
+                      ).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                     <Text><b>Estado:</b> {cuota.estado}</Text>
                     <Text><b>Cuota N°: {cuota.numeroCuota}</b></Text>

@@ -5,7 +5,7 @@ import {
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'http://192.168.0.147:3001';
+const API_BASE = 'http://192.168.1.48:3001';
 
 export default function EditarTasas() {
   // Estado de tasas

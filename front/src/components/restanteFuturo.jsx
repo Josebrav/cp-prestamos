@@ -25,7 +25,7 @@ export default function RestanteFuturo() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get("http://192.168.0.147:3001/reportes/restante-futuro");
+        const res = await axios.get("http://192.168.1.48:3001/reportes/restante-futuro");
         setData(res.data);
       } catch (error) {
         console.error("Error cargando reporte restante a futuro:", error);

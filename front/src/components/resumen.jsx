@@ -4,7 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FiPrinter } from "react-icons/fi";
 
-const API_BASE = "http://192.168.0.147:3001";
+const API_BASE = "http://192.168.1.48:3001";
 
 export default function ReporteSGP() {
     const [loading, setLoading] = useState(true);

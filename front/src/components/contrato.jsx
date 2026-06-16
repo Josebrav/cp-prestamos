@@ -46,7 +46,7 @@ export default function Contrato() {
   useEffect(() => {
     if (id) {
       axios
-        .get(`http://192.168.0.147:3001/prestamo/${id}`)
+        .get(`http://192.168.1.48:3001/prestamo/${id}`)
         .then((res) => {
           const prestamoData = res.data;
           setPrestamo(prestamoData);
@@ -71,7 +71,7 @@ export default function Contrato() {
           }
 
           return axios.get(
-            `http://192.168.0.147:3001/usuario/${prestamoData.userId}`
+            `http://192.168.1.48:3001/usuario/${prestamoData.userId}`
           );
         })
         .then((res) => {

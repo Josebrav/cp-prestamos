@@ -7,6 +7,7 @@ import {
   Select,
   Spinner,
   Flex,
+  useToast,
 } from "@chakra-ui/react";
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
@@ -16,7 +17,7 @@ import axios from "axios";
 import { numeroALetras } from "../utils/numerosALetras";
 
 
-const API_BASE = "http://192.168.0.147:3001";
+const API_BASE = "http://192.168.1.48:3001";
 
 export default function VerCuota() {
   const { id } = useParams();
@@ -25,12 +26,16 @@ export default function VerCuota() {
   const [cuota, setCuota] = useState(null);
   const [quitas, setQuitas] = useState([]);
   const [quitaSeleccionada, setQuitaSeleccionada] = useState("");
+  const [quitaPorcentaje, setQuitaPorcentaje] = useState(0);
+  const [descuentoCalculado, setDescuentoCalculado] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // nControl global
   const [nControlActual, setNControlActual] = useState(null);
   const [nControlSiguiente, setNControlSiguiente] = useState(null);
   const [loadingNControl, setLoadingNControl] = useState(true);
+  const [controlInput, setControlInput] = useState('');
+  const toast = useToast();
 
   // Input y cálculos de monto
   const [montoRecibido, setMontoRecibido] = useState(""); // string para no romper mientras escribe
@@ -56,6 +61,10 @@ export default function VerCuota() {
       .then(([resCuota, resQuitas]) => {
         setCuota(resCuota.data);
         setQuitas(resQuitas.data || []);
+        // inicializar controlInput desde la cuota recibida
+        if (resCuota.data && resCuota.data.numeroControl) {
+          setControlInput(String(resCuota.data.numeroControl));
+        }
       })
       .catch((err) => {
         console.error("Error cargando datos:", err);
@@ -103,12 +112,71 @@ export default function VerCuota() {
     // 🚫 Si ya se pagó, NO tocar el input
     if (pagoRealizado) return;
 
-    const montoFinal = val(cuota.montoConInteres);
+    // Si ya hay pagos parciales registrados, mostrar el restante correctamente
+    const sumaPagoCuotas = (cuota.PagoCuota || []).reduce((acc, p) => acc + val(p.monto), 0) || val(cuota.montoPagado);
+    if (sumaPagoCuotas > 0) {
+      // El backend puede haber reducido `montoConInteres` al registrar pagos.
+      // Si `montoConInteres` está presente, ya representa el restante, por lo que
+      // debemos mostrarlo directamente y NO restar los pagos otra vez.
+      if (cuota.montoConInteres !== null && cuota.montoConInteres !== undefined) {
+        const restanteDirecto = Number(val(cuota.montoConInteres).toFixed(2));
+        setDescuentoCalculado(0);
+        setQuitaPorcentaje(0);
+        setMontoCalculado(restanteDirecto);
+        setMontoRecibido(restanteDirecto.toFixed(2));
+        return;
+      }
 
-    setMontoCalculado(montoFinal);
-    setMontoRecibido(montoFinal.toFixed(2));
+      // Si no hay `montoConInteres`, calculamos restante desde el monto base
+      const montoAdeudado = val(cuota.monto);
+      const restante = Number((montoAdeudado - sumaPagoCuotas).toFixed(2));
+      setDescuentoCalculado(0);
+      setQuitaPorcentaje(0);
+      setMontoCalculado(restante);
+      setMontoRecibido(restante.toFixed(2));
+      return;
+    }
 
-  }, [cuota, pagoRealizado]);
+    // Si la cuota está vencida, mostramos el monto con interés
+    if (cuota.estado === "vencida") {
+      const montoFinal = val(cuota.montoConInteres);
+      setMontoCalculado(montoFinal);
+      setMontoRecibido(montoFinal.toFixed(2));
+      setDescuentoCalculado(0);
+      setQuitaPorcentaje(0);
+      return;
+    }
+
+    // Si está al día, aplicamos quita (si hay)
+    const montoBase = val(cuota.monto);
+    const porcentaje = Number(quitaPorcentaje) || 0;
+    const descuento = Number(((montoBase * porcentaje) / 100).toFixed(2));
+    const montoConQuita = Number((montoBase - descuento).toFixed(2));
+    setDescuentoCalculado(descuento);
+    setMontoCalculado(montoConQuita);
+    setMontoRecibido(montoConQuita.toFixed(2));
+
+  }, [cuota, pagoRealizado, quitaPorcentaje]);
+
+  // Recalcular cuando cambia la quita seleccionada
+  useEffect(() => {
+    if (!cuota) return;
+    if (pagoRealizado) return; // no sobrescribir monto después de un pago
+    // si ya hay pagos parciales, no aplicar quita (usar suma de PagoCuota)
+    const sumaPagoCuotas = (cuota.PagoCuota || []).reduce((acc, p) => acc + val(p.monto), 0) || val(cuota.montoPagado);
+    if (sumaPagoCuotas > 0) return;
+    if (cuota.estado === "vencida") return; // no aplica
+    const q = quitas.find((q) => q.tipo === quitaSeleccionada);
+    const porcentaje = q ? Number(q.porcentaje) : 0;
+    setQuitaPorcentaje(porcentaje);
+
+    const montoBase = val(cuota.monto);
+    const descuento = Number(((montoBase * porcentaje) / 100).toFixed(2));
+    const montoConQuita = Number((montoBase - descuento).toFixed(2));
+    setDescuentoCalculado(descuento);
+    setMontoCalculado(montoConQuita);
+    setMontoRecibido(montoConQuita.toFixed(2));
+  }, [quitaSeleccionada, quitas, cuota]);
   // Letras del monto
   useEffect(() => {
     setMontoEnLetras(numeroALetras(displayAmount));
@@ -133,8 +201,14 @@ export default function VerCuota() {
 
       const capitalPorCuota = val(prestamo.monto) / cantidadCuotas;
 
+      // Calcular pagos previos sobre esta cuota
+      const sumaPagoCuotas = (cuota.PagoCuota || []).reduce((acc, p) => acc + val(p.monto), 0) || val(cuota.montoPagado);
+
       if (val(cuota.montoConInteres) > 0) {
-        interes = val(cuota.montoConInteres) - capitalPorCuota;
+        // El interés actual es la diferencia entre lo que se debe con interés
+        // y el saldo original pendiente (monto original menos pagos previos)
+        const saldoPendienteOriginal = val(cuota.monto) - sumaPagoCuotas;
+        interes = val(cuota.montoConInteres) - saldoPendienteOriginal;
       } else {
         const hoy = new Date();
         const venc = new Date(cuota.fechaVencimiento);
@@ -149,9 +223,27 @@ export default function VerCuota() {
       }
     }
 
+    // Validaciones frontend
+    if (pago <= 0) return alert('Ingrese un monto válido mayor que 0');
+
+    // Si la cuota está vencida, al menos permitir cualquier pago (backend controla intereses)
+    // Si la cuota está vencida, exigir que el pago parcial cubra al menos los intereses
+    if (estaVencida()) {
+      if (pago < interes) {
+        return alert(`Pago insuficiente: debe abonar al menos los intereses: $${interes.toFixed(2)}`);
+      }
+    }
+
+    // Si la cuota está al día y se seleccionó quita, exigir pago completo del monto con quita
+    if (cuota.estado === 'al dia' && quitaSeleccionada) {
+      const esperado = Number(montoCalculado);
+      if (pago < esperado) {
+        return alert('La quita sólo se aplica si paga el monto total con descuento. Ingrese el monto con quita o quite la opción.');
+      }
+    }
+
     // Número de control visible en la boleta
     const numeroControlUsado = nControlSiguiente;
-
 
     try {
       // 1) Registrar pago (si tu backend acepta numeroControl, lo guardamos para auditoría)
@@ -160,6 +252,8 @@ export default function VerCuota() {
         fechaPago: hoyISO,
         interesPagado: interes,
         quitaAplicada: !!quitaSeleccionada,
+        quitaTipo: quitaSeleccionada || null,
+        quitaPorcentaje: quitaPorcentaje || 0,
         numeroControl: numeroControlUsado,
         registrarPagoCuota: true, // 🔥 CLAVE
       });
@@ -261,6 +355,30 @@ export default function VerCuota() {
           )}
         </Flex>
       )}
+      {/* Recibo pequeño (no imprimible) */}
+      {pagoRealizado && cuota && (
+        <Box className="no-print" bg="green.50" p={3} m={3} borderRadius="md">
+          <Text fontWeight="bold">Recibo (registro rápido)</Text>
+          <Text>Fecha: {new Date().toLocaleDateString()}</Text>
+          <Text>
+            Monto pagado: $
+            {(
+              // Mostrar el último pago registrado si existe, si no fallback a cuota.montoPagado o monto recibido
+              (cuota.PagoCuota && cuota.PagoCuota.length > 0
+                ? val(cuota.PagoCuota[cuota.PagoCuota.length - 1].monto)
+                : val(cuota.montoPagado) || val(montoRecibido)
+              )
+            ).toLocaleString('es-AR')}
+          </Text>
+          {descuentoCalculado > 0 && (
+            <Text>Descuento aplicado: ${descuentoCalculado.toLocaleString('es-AR')}</Text>
+          )}
+          <Text>Estado cuota: {cuota.estado}</Text>
+          <Button size="sm" mt={2} onClick={() => window.print()}>
+            Imprimir recibo
+          </Button>
+        </Box>
+      )}
 
       {/* Boletas duplicadas */}
       <Box w="100%" maxW="100%" className="screen-preview">
@@ -295,9 +413,57 @@ export default function VerCuota() {
                 {fechaString}
               </Text>
 
-              <Text position="absolute" top="44px" right="38px" fontWeight="bold">
-                N° Control: {loadingNControl ? "..." : nroControlParaMostrar ?? "-"}
+              {/* Texto visible sólo en impresión en la posición original (debajo de la fecha) */}
+              <Text
+                className="print-only"
+                position="absolute"
+                top="44px"
+                right="38px"
+                fontWeight="bold"
+              >
+                N° Control: {cuota?.numeroControl ?? nroControlParaMostrar ?? '-'}
               </Text>
+
+              {/* Input editable (pantalla) para cambiar número de control; está oculto al imprimir por las reglas CSS globales */}
+              <Box position="absolute" top="40px" right="24px" className="no-print">
+                <Text fontSize="xs" color="gray.200">N° Control</Text>
+                <Input
+                  size="sm"
+                  w="90px"
+                  value={controlInput}
+                  onChange={(e) => setControlInput(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      const valStr = e.target.value.trim();
+                      if (!valStr) {
+                        toast({ title: 'Error', description: 'Ingrese un número válido', status: 'error', duration: 3000 });
+                        return;
+                      }
+                      const n = parseInt(valStr);
+                      if (!Number.isInteger(n) || n <= 0) {
+                        toast({ title: 'Error', description: 'Número inválido', status: 'error', duration: 3000 });
+                        return;
+                      }
+                      try {
+                        const res = await axios.put(`${API_BASE}/cuotas/${id}/numero-control`, { numeroControl: n });
+                        setCuota(res.data);
+                        setControlInput(String(res.data.numeroControl));
+                        toast({ title: 'Actualizado', description: 'Número de control guardado', status: 'success', duration: 2500 });
+                      } catch (err) {
+                        if (err.response?.status === 409) {
+                          toast({ title: 'Conflicto', description: 'Número de control ya en uso', status: 'error', duration: 4000 });
+                        } else {
+                          toast({ title: 'Error', description: err.response?.data?.error || err.message || 'Error al guardar', status: 'error', duration: 4000 });
+                        }
+                        // restaurar valor actual del servidor
+                        const latest = await axios.get(`${API_BASE}/cuotas/${id}`);
+                        setCuota(latest.data);
+                        setControlInput(String(latest.data.numeroControl ?? ''));
+                      }
+                    }
+                  }}
+                />
+              </Box>
 
               <Text position="absolute" top="70px" left="170px" fontWeight="bold">
                 {cuota?.numeroCuota}/{prestamo?.cuotas?.length ?? "-"}
@@ -328,6 +494,9 @@ export default function VerCuota() {
           gap={3}
           m={"370px"}
         >
+          <Button colorScheme="gray" onClick={() => window.history.back()}>
+            ← Volver
+          </Button>
           {!cuotaPagada && (
             <Button colorScheme="green" onClick={handlePago}>
               Registrar Pago
@@ -351,8 +520,11 @@ export default function VerCuota() {
             }
             .no-print { display: none !important; }
             button, select, input { display: none !important; }
+            .print-only { display: block !important; }
             @page { margin: 0; size: auto; }
           }
+          /* En pantalla ocultar elementos solo-impresión */
+          .print-only { display: none; }
         `}
       </style>
     </Box>

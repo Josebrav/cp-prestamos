@@ -65,7 +65,7 @@ export default function VerPrestamos() {
   const fetchCliente = () => {
     setLoadingCliente(true);
     axios
-      .get(`http://192.168.0.147:3001/usuario/${id}`)
+      .get(`http://192.168.1.48:3001/usuario/${id}`)
       .then((res) => {
         setCliente(res.data);
         setLoadingCliente(false);
@@ -82,10 +82,19 @@ export default function VerPrestamos() {
 
   const fetchPrestamos = () => {
     axios
-      .get(`http://192.168.0.147:3001/prestamos/usuario/${id}`)
+      .get(`http://192.168.1.48:3001/prestamos/usuario/${id}`)
       .then((res) => {
-        console.log("🔥 RESPONSE COMPLETA:", res.data); // 👈 AGREGÁ ESTO
-        setPrestamos(res.data);
+        console.log("🔥 RESPONSE COMPLETA:", res.data);
+        // Ordenamos los préstamos al obtenerlos para evitar reordenamientos
+        // automáticos durante re-renders (p.ej. al aprobar uno).
+        const sorted = (res.data || []).slice().sort((a, b) => {
+          if (a.estado === 'cancelado' && b.estado !== 'cancelado') return 1;
+          if (b.estado === 'cancelado' && a.estado !== 'cancelado') return -1;
+          if (a.estado === "pendiente" && b.estado !== "pendiente") return -1;
+          if (a.estado !== "pendiente" && b.estado === "pendiente") return 1;
+          return (a.numeroControl || 0) - (b.numeroControl || 0);
+        });
+        setPrestamos(sorted);
         setLoading(false);
       })
       .catch((err) => {
@@ -116,28 +125,13 @@ export default function VerPrestamos() {
       </Text>
     );
   };
-  <Box textAlign="center" mb={4}>
-    {loadingCliente ? (
-      <Spinner />
-    ) : cliente ? (
-      <Text
-        fontSize="2xl"
-        fontWeight="bold"
-        color="teal.600"
-        cursor="pointer"
-        _hover={{ textDecoration: "underline" }}
-        onClick={onOpen}
-      >
-        {cliente.name} {cliente.surname}
-      </Text>
-    ) : (
-      <Text color="red.500">Cliente no encontrado</Text>
-    )}
-  </Box>;
+
+  // Indica si este usuario tiene al menos un préstamo en 'en legales'
+  const tieneEnLegales = prestamos.some((p) => p.estado === 'en legales');
 
   const handleAccionPrestamo = (prestamoId, nuevoEstado) => {
     axios
-      .put(`http://192.168.0.147:3001/actualizarprestamo/${prestamoId}/estado`, {
+      .put(`http://192.168.1.48:3001/actualizarprestamo/${prestamoId}/estado`, {
         estado: nuevoEstado,
       })
       .then(() => {
@@ -197,23 +191,36 @@ export default function VerPrestamos() {
           <Text fontSize="3xl" fontWeight="bold" textAlign="center" mb={4}>
             Préstamos del Cliente
           </Text>
+          <Box textAlign="center" mb={4}>
+            {loadingCliente ? (
+              <Spinner />
+            ) : cliente ? (
+              <Text
+                fontSize="xl"
+                fontWeight="bold"
+                color="teal.600"
+                cursor="pointer"
+                _hover={{ textDecoration: "underline" }}
+                onClick={onOpen}
+              >
+                {cliente.name} {cliente.surname}
+                {tieneEnLegales && (
+                  <Text as="span" ml={3} fontSize="sm" color="red.500" fontWeight="semibold">
+                    Tiene préstamos en legales
+                  </Text>
+                )}
+              </Text>
+            ) : (
+              <Text color="red.500">Cliente no encontrado</Text>
+            )}
+          </Box>
           <Divider mb={6} />
 
           {prestamos.length === 0 ? (
-            <Text textAlign="center">Este cliente no tiene préstamos registrados.</Text>
+            <Text textAlign="center">Este cliente no tiene préstamos registrados.</Text> 
           ) : (
             <Accordion allowMultiple>
-              {prestamos
-                .slice()
-                .sort((a, b) => {
-                  // prioridad: pendientes primero
-                  if (a.estado === "pendiente" && b.estado !== "pendiente") return -1;
-                  if (a.estado !== "pendiente" && b.estado === "pendiente") return 1;
-
-                  // después por numeroControl descendente
-                  return (a.numeroControl || 0) - (b.numeroControl || 0);
-                })
-                .map((prestamo) => (
+              {prestamos.map((prestamo) => (
                   <AccordionItem
                     key={prestamo.id}
                     border="1px solid"
@@ -267,13 +274,20 @@ export default function VerPrestamos() {
                           )}
 
                           {prestamo.estado !== "finalizado" && (
-                            <Button
-                              size="sm"
-                              colorScheme="red"
-                              onClick={() => handleAccionPrestamo(prestamo.id, "cancelado")}
-                            >
-                              Cancelar
-                            </Button>
+                            (() => {
+                              const tienePagos = (prestamo.cuotas || []).some(c => (c.PagoCuota && c.PagoCuota.length > 0) || Number(c.montoPagado || 0) > 0);
+                              return (
+                                <Button
+                                  size="sm"
+                                  colorScheme="red"
+                                  onClick={() => handleAccionPrestamo(prestamo.id, "cancelado")}
+                                  isDisabled={tienePagos}
+                                  title={tienePagos ? 'No se puede cancelar: existen pagos en este préstamo' : 'Finalizar préstamo'}
+                                >
+                                  Cancelar
+                                </Button>
+                              );
+                            })()
                           )}
 
                           <Button
@@ -298,11 +312,11 @@ export default function VerPrestamos() {
                             <Th>N°</Th>
                             <Th>Vencimiento</Th>
                             <Th>Monto</Th>
-                            <Th>Monto con Interés</Th>
+                            <Th>Monto con Interés o Restante</Th>
                             <Th>Estado</Th>
                             <Th>Pagos parciales</Th>
                             <Th>Pago total</Th>
-                            <Th>Imprimir</Th>
+                            <Th>Pagar e Imprimir</Th>
                           </Tr>
                         </Thead>
 
@@ -334,7 +348,8 @@ export default function VerPrestamos() {
 
                               const showLupa = isPaid;
                               const showPrinter =
-                                index === 0 || isPaid || prevIsPaid;
+                                (index === 0 || isPaid || prevIsPaid) &&
+                                prestamo.estado !== "pendiente";
 
                               const tienePagos = cuota.PagoCuota?.length > 0;
 

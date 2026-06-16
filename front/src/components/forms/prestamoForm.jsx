@@ -37,7 +37,7 @@ console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
   useEffect(() => {
     const fetchTasas = async () => {
       try {
-        const res = await axios.get("http://192.168.0.147:3001/tasa"); // 👈 endpoint para traer todas las tasas
+        const res = await axios.get("http://192.168.1.48:3001/tasa"); // 👈 endpoint para traer todas las tasas
         const tasasObj = {};
         res.data.forEach(t => {
           tasasObj[t.tipo] = parseFloat(t.tasaAnual);
@@ -52,7 +52,7 @@ console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
 
   const buscarUsuarioPorDni = async () => {
     try {
-      const res = await axios.post('http://192.168.0.147:3001/buscar-dni', { dni });
+      const res = await axios.post('http://192.168.1.48:3001/buscar-dni', { dni });
       const user = res.data;
 
       setUserId(user.id);
@@ -90,7 +90,7 @@ console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
         tipoTasa,
       };
 
-      await axios.post('http://192.168.0.147:3001/newprestamo', prestamoData);
+      await axios.post('http://192.168.1.48:3001/newprestamo', prestamoData);
 
       await Swal.fire({
         icon: 'success',
@@ -159,11 +159,15 @@ const montoPorCuota = valorCuota;
     maximumFractionDigits: 2,
   });
 };
-
+const formatearFecha = (fecha) => {
+  const [anio, mes, dia] = fecha.split("-");
+  return `${dia}-${mes}-${anio}`;
+};
     let detalleCuotas = cuotasSimuladas
+    
       .map(
         (c) =>
-          `Cuota ${c.numeroCuota}: $${formatearNumero(c.monto)} (Vence: ${c.fechaVencimiento})`
+          `Cuota ${c.numeroCuota}: $${formatearNumero(c.monto)} (Vence: ${formatearFecha(c.fechaVencimiento)})`
       )
       .join("<br/>");
 
@@ -173,7 +177,7 @@ const montoPorCuota = valorCuota;
       html: `
         <b>Monto solicitado:</b> $${formatearNumero(monto)}<br/>
         <b>Tasa anual:</b> ${tasaAnual}%<br/>
-        <b>Monto final :</b> $${montoFinal.toFixed(2)}<br/>
+        <b>Monto final :</b> $${formatearNumero(montoFinal.toFixed(2))}<br/>
         <b>Cantidad de cuotas:</b> ${cuotas}<br/><br/>
         ${detalleCuotas}
       `,

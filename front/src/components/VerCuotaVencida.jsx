@@ -11,7 +11,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { numeroALetras } from "../utils/numerosALetras";
 
-const API_BASE = "http://192.168.0.147:3001";
+const API_BASE = "http://192.168.1.48:3001";
 
 export default function VerCuotaVencida() {
   const { id } = useParams();
