@@ -4,10 +4,14 @@ const getAllUsers = async () => {
   const users = await User.findAll({
     include: [
       {
-        model: Prestamo
+        model: Prestamo,
+        attributes: ['id', 'estado', 'monto', 'fechaInicio'] // 👈 importante
       }
-    ]
+    ],
+    raw: false,   // 👈 CLAVE
+    nest: true    // 👈 CLAVE
   });
+
   return users;
 };
 

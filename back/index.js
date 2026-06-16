@@ -19,12 +19,12 @@ server.get('', (req, res) => {
 });
 
 conn.sync({ force: false }).then(async () => {
-  /* await initControl(); 
-  await initializeTasas(); // Inicializa tasas
-  await QuitaCuotas.bulkCreate([
-  { tipo: "tipo1", porcentaje: 10 },
-  { tipo: "tipo2", porcentaje: 20 }
-]); */
+//    await initControl(); 
+//   await initializeTasas(); // Inicializa tasas
+//   await QuitaCuotas.bulkCreate([
+//   { tipo: "tipo1", porcentaje: 10 },
+//   { tipo: "tipo2", porcentaje: 20 }
+// ]); 
   server.listen(port, '0.0.0.0', () => {
   console.log(`Server listening on port ${port}`);
 });

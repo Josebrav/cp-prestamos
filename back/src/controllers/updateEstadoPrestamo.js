@@ -1,4 +1,4 @@
-const { Prestamo, Cuota } = require('../database');
+const { Prestamo, Cuota, PagoCuota } = require('../database');
 
 const updateEstadoPrestamo = async (id, nuevoEstado) => {
   if (!id || !nuevoEstado) {
@@ -29,6 +29,14 @@ const updateEstadoPrestamo = async (id, nuevoEstado) => {
 
   // 🔴 CLAVE: si se cancela
   if (nuevoEstado === "cancelado") {
+    // No permitir cancelación si existen pagos registrados en cualquier cuota
+    const cuotaIds = prestamo.cuotas.map((c) => c.id);
+    const pagosCount = await PagoCuota.count({ where: { cuotaId: cuotaIds } });
+    if (pagosCount > 0) {
+      throw new Error('No se puede cancelar el préstamo: ya existen pagos registrados');
+    }
+
+    // Si no hay pagos, marcar cuotas no pagadas como canceladas
     await Promise.all(
       prestamo.cuotas.map(async (cuota) => {
         if (cuota.estado !== "pagada") {

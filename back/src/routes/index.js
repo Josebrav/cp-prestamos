@@ -29,6 +29,7 @@ const { getCuotasVencidasMes } = require('../controllers/getCuotasVencidasMes');
 const { getResumenSGP } = require('../controllers/resumen');
 const { getTotalAcumulado } = require('../controllers/getTotalAcumulado');
 const { getCuotaById, pagarCuota } = require('../controllers/cuotasController');
+const putCuotaNumeroControlHandler = require('../handlers/putCuotaNumeroControlHandler');
 const { deletePrestamoByNumeroControl } = require('../controllers/buscarprestamoxID');
 const { getCurrentNControl, incrementNControl, getControl, sumarControl } = require('../controllers/nController');
 
@@ -82,6 +83,9 @@ router.get("/cuotas/:id", getCuotaById);
 
 // Registrar un pago de cuota
 router.post("/cuotas/:id/pago", pagarCuota);
+
+// Actualizar número de control de una cuota
+router.put('/cuotas/:id/numero-control', putCuotaNumeroControlHandler);
 
 router.get('/control', getControl);        // consultar valor
 router.post('/control/sumar', sumarControl); // sumar 1

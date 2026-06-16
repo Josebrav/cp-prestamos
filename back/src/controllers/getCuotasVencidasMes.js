@@ -17,7 +17,12 @@ const getCuotasVencidasMes = async (req, res) => {
         fechaVencimiento: {
           [Op.between]: [startDate, endDate]
         },
-        // ❌ sacamos estado de cuota
+        // Excluir cuotas ya pagadas y montos 0
+        estado: { [Op.not]: 'pagada' },
+        [Op.or]: [
+          { monto: { [Op.gt]: 0 } },
+          { montoConInteres: { [Op.gt]: 0 } }
+        ]
       },
       include: [
         {

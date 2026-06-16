@@ -35,66 +35,65 @@ const pagarCuota = async (req, res) => {
 
     const cuota = await Cuota.findByPk(id, { include: [Prestamo] });
     if (!cuota) return res.status(404).json({ error: "Cuota no encontrada" });
+    // Validaciones básicas
+    const pago = Number(montoPagado);
+    if (isNaN(pago) || pago <= 0) return res.status(400).json({ error: 'Monto de pago inválido' });
 
-    // 🔹 Registrar SIEMPRE el pago (historial)
-if (req.body.registrarPagoCuota) {
-  await PagoCuota.create({
-    cuotaId: id,
-    monto: montoPagado,
-    fechaPago: fechaPago || new Date().toISOString().split("T")[0],
-  });
-}
+    const fecha = fechaPago || new Date().toISOString().split('T')[0];
 
-    // monto a cobrar: si hay montoConInteres lo usamos, si no monto base
-    let montoActualizado = cuota.montoConInteres || cuota.monto;
+    // Registrar pago en historial siempre
+    await PagoCuota.create({ cuotaId: id, monto: pago, fechaPago: fecha });
 
-    let intereses = 0;
-    if (cuota.estado === "vencida") {
-      intereses = montoActualizado - cuota.monto;
-      if (montoPagado < intereses) {
-        return res.status(400).json({ error: `Debe abonar al menos los intereses: $${intereses}` });
-      }
+    // Monto pagado acumulado hasta ahora
+    const montoPagadoPrevio = Number(cuota.montoPagado) || 0;
+    const nuevoMontoPagado = Number((montoPagadoPrevio + pago).toFixed(2));
+
+    // Determinar monto a cobrar actual (si existe montoConInteres se considera lo que queda incluyendo intereses)
+    const montoConInteresActual = cuota.montoConInteres !== null && cuota.montoConInteres !== undefined
+      ? Number(cuota.montoConInteres)
+      : Number(cuota.monto);
+
+    // Saldo original pendiente (sin intereses)
+    const saldoPendienteOriginal = Number(cuota.monto) - montoPagadoPrevio;
+
+    // Interés actual incluido en montoConInteres (si aplica)
+    const interesActual = Math.max(0, montoConInteresActual - saldoPendienteOriginal);
+
+    // Calcular restante después del pago
+    const restanteConInteres = Number((montoConInteresActual - pago).toFixed(2));
+
+    // Si la cuota está vencida, el pago parcial debe cubrir al menos los intereses pendientes
+    const interesesPendientes = Number(interesActual.toFixed(2));
+    if (cuota.estado === 'vencida' && pago < interesesPendientes && restanteConInteres > 0) {
+      return res.status(400).json({ error: `Debe abonar al menos los intereses: $${interesesPendientes}` });
     }
 
-    // 🔹 Pago final: si pago >= montoActualizado o si hay quita aplicada, marcamos como pagada
-    const pagoFinal = montoPagado >= montoActualizado || quitaAplicada;
-
-    if (pagoFinal) {
-      cuota.estado = "pagada";
+    // Si el pago cubre o excede lo adeudado (con intereses), marcamos como pagada
+    if (restanteConInteres <= 0 || quitaAplicada) {
+      cuota.estado = 'pagada';
       cuota.montoConInteres = 0;
-      cuota.montoPagado = montoPagado;
-      cuota.fechaPago = fechaPago || new Date().toISOString().split("T")[0];
-      cuota.interesPagado = cuota.estado === "vencida" ? intereses : 0;
-
+      // Registrar monto pagado acumulado (sumatoria previa + pago actual)
+      cuota.montoPagado = nuevoMontoPagado; // ahora guarda el total abonado
+      cuota.fechaPago = fecha;
+      // interesPagado: sumamos lo que se haya pagado por intereses (no excede interesActual)
+      const interesPagadoAhora = Math.min(interesActual, pago);
+      cuota.interesPagado = Number(((Number(cuota.interesPagado) || 0) + interesPagadoAhora).toFixed(2));
       await cuota.save();
-      return res.json({ message: "Cuota pagada correctamente", cuota });
+      return res.json({ message: 'Cuota pagada correctamente', cuota });
     }
 
-    // Pago parcial vencida
-    if (montoPagado < montoActualizado && cuota.estado === "vencida") {
-      cuota.montoConInteres = montoActualizado - montoPagado;
-      cuota.montoPagado = montoPagado;
-      await cuota.save();
-      return res.json({ message: "Pago parcial registrado (cuota vencida)", cuota });
-    }
-
-    // Pago parcial al día (sin quita)
-    if (montoPagado < montoActualizado && cuota.estado === "al dia") {
-      cuota.montoConInteres = montoActualizado - montoPagado;
-      cuota.montoPagado = montoPagado;
-      await cuota.save();
-      return res.json({ message: "Pago parcial registrado (cuota al día)", cuota });
-    }
-
-    // Última defensa (seguridad)
-    cuota.estado = "pagada";
-    cuota.montoConInteres = 0;
-    cuota.montoPagado = montoPagado;
-    cuota.fechaPago = fechaPago || new Date().toISOString().split("T")[0];
-    cuota.interesPagado = cuota.estado === "vencida" ? intereses : 0;
+    // Pago parcial: actualizar montos acumulados y montoConInteres restante
+    cuota.montoPagado = nuevoMontoPagado;
+    cuota.montoConInteres = restanteConInteres;
+    // Si hay interés, actualizar interesPagado en la parte correspondiente
+    const interesPagadoAhora = Math.min(interesActual, pago);
+    cuota.interesPagado = Number(((Number(cuota.interesPagado) || 0) + interesPagadoAhora).toFixed(2));
+    // Mantener estado: si originalmente estaba vencida, conservar vencida; si no, dejar 'al dia' o 'vencida' según monto
+    if (cuota.estado === 'vencida' && restanteConInteres > 0) cuota.estado = 'vencida';
+    else if (cuota.estado !== 'pagada') cuota.estado = 'al dia';
 
     await cuota.save();
-    res.json({ message: "Cuota pagada correctamente", cuota });
+    return res.json({ message: 'Pago parcial registrado', cuota });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al registrar pago" });

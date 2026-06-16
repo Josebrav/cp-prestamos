@@ -27,6 +27,7 @@ const getResumenSGP = async (req, res) => {
         fechaVencimiento: {
           [Op.between]: [primerDiaMes, ultimoDiaMes],
         },
+        estado: { [Op.not]: 'pagada' }
       },
       include: [Prestamo],
     });
@@ -37,6 +38,7 @@ const getResumenSGP = async (req, res) => {
     const cuotasAcumuladas = await Cuota.findAll({
       where: {
         fechaVencimiento: { [Op.lte]: ultimoDiaMes },
+        estado: { [Op.not]: 'pagada' }
       },
       include: [Prestamo],
     });
@@ -50,6 +52,7 @@ const getResumenSGP = async (req, res) => {
     const cuotasFuturo = await Cuota.findAll({
       where: {
         fechaVencimiento: { [Op.gte]: mañana },
+        estado: { [Op.not]: 'pagada' }
       },
       include: [
         { model: Prestamo, include: [{ model: User, attributes: ['name', 'surname'] }] }
