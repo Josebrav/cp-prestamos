@@ -24,9 +24,12 @@ const PrestamoForm = () => {
   const [cuotas, setCuotas] = useState('');
   const [tipoTasa, setTipoTasa] = useState('normal');
   const [dni, setDni] = useState('');
+  const [apellido, setApellido] = useState('');
   const [userId, setUserId] = useState('');
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [usuarioEncontrado, setUsuarioEncontrado] = useState(false);
+  const [usuariosMultiples, setUsuariosMultiples] = useState([]);
+  const [mostrarSelect, setMostrarSelect] = useState(false);
 
   const [tasas, setTasas] = useState({}); // 👈 guardamos tasas desde backend
   const navigate = useNavigate();
@@ -60,6 +63,8 @@ console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
         user.name && user.surname ? `${user.name} ${user.surname}` : 'Nombre no disponible'
       );
       setUsuarioEncontrado(true);
+      setMostrarSelect(false);
+      setUsuariosMultiples([]);
 
       Swal.fire({
         icon: 'success',
@@ -70,11 +75,69 @@ console.log("HOY sv-SE:", new Date().toLocaleDateString("sv-SE"));
       setUsuarioEncontrado(false);
       setNombreUsuario('');
       setUserId('');
+      setMostrarSelect(false);
+      setUsuariosMultiples([]);
       Swal.fire({
         icon: 'error',
         title: 'Usuario no encontrado',
         text: error.response?.data?.error || error.message,
       });
+    }
+  };
+
+  const buscarUsuariosPorApellido = async () => {
+    try {
+      const res = await axios.post('http://192.168.1.48:3001/buscar-apellido', { surname: apellido });
+      const users = res.data;
+
+      if (users.length === 1) {
+        // Si solo hay un usuario, seleccionarlo automáticamente
+        const user = users[0];
+        setUserId(user.id);
+        setNombreUsuario(
+          user.name && user.surname ? `${user.name} ${user.surname}` : 'Nombre no disponible'
+        );
+        setUsuarioEncontrado(true);
+        setMostrarSelect(false);
+        setUsuariosMultiples([]);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Usuario encontrado',
+          text: `Usuario: ${user.name && user.surname ? `${user.name} ${user.surname}` : 'Nombre no disponible'}`,
+        });
+      } else if (users.length > 1) {
+        // Si hay múltiples usuarios, mostrar select
+        setUsuariosMultiples(users);
+        setMostrarSelect(true);
+        setUsuarioEncontrado(false);
+        setUserId('');
+        setNombreUsuario('');
+      }
+    } catch (error) {
+      setUsuarioEncontrado(false);
+      setNombreUsuario('');
+      setUserId('');
+      setMostrarSelect(false);
+      setUsuariosMultiples([]);
+      Swal.fire({
+        icon: 'error',
+        title: 'Usuario no encontrado',
+        text: error.response?.data?.error || error.message,
+      });
+    }
+  };
+
+  const handleSeleccionarUsuario = (e) => {
+    const selectedId = e.target.value;
+    if (selectedId) {
+      const selectedUser = usuariosMultiples.find(u => u.id === selectedId);
+      setUserId(selectedUser.id);
+      setNombreUsuario(
+        selectedUser.name && selectedUser.surname ? `${selectedUser.name} ${selectedUser.surname}` : 'Nombre no disponible'
+      );
+      setUsuarioEncontrado(true);
+      setMostrarSelect(false);
     }
   };
 
@@ -190,22 +253,69 @@ const formatearFecha = (fecha) => {
       <Heading size="md" mb={6} textAlign="center">Formulario de Préstamo</Heading>
       <form onSubmit={handleSubmit}>
         <Stack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>DNI del usuario</FormLabel>
-            <Input
-              placeholder="Ingrese DNI"
-              value={dni}
-              onChange={(e) => setDni(e.target.value)}
-            />
-            <Button mt={2} colorScheme="blue" onClick={buscarUsuarioPorDni}>
-              Buscar usuario
-            </Button>
-            {usuarioEncontrado && (
-              <Text mt={2} color="green.500">
-                Usuario encontrado: <strong>{nombreUsuario}</strong>
-              </Text>
-            )}
-          </FormControl>
+          {!usuarioEncontrado ? (
+            <>
+              <FormControl isRequired>
+                <FormLabel>DNI del usuario</FormLabel>
+                <Input
+                  placeholder="Ingrese DNI"
+                  value={dni}
+                  onChange={(e) => setDni(e.target.value)}
+                />
+                <Button mt={2} colorScheme="blue" onClick={buscarUsuarioPorDni}>
+                  Buscar por DNI
+                </Button>
+              </FormControl>
+
+              <Box borderY="2px solid #e2e8f0" py={4}>
+                <Text textAlign="center" fontSize="sm" color="gray.600">O</Text>
+              </Box>
+
+              <FormControl isRequired>
+                <FormLabel>Apellido del usuario</FormLabel>
+                <Input
+                  placeholder="Ingrese apellido"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
+                />
+                <Button mt={2} colorScheme="blue" onClick={buscarUsuariosPorApellido}>
+                  Buscar por Apellido
+                </Button>
+                
+                {mostrarSelect && usuariosMultiples.length > 1 && (
+                  <Box mt={3}>
+                    <FormLabel fontSize="sm">Seleccione el cliente:</FormLabel>
+                    <Select placeholder="Elige un cliente" onChange={handleSeleccionarUsuario}>
+                      {usuariosMultiples.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} {user.surname} - DNI: {user.dni}
+                        </option>
+                      ))}
+                    </Select>
+                  </Box>
+                )}
+              </FormControl>
+            </>
+          ) : (
+            <>
+              <Box p={3} bg="green.50" borderRadius="md" borderLeft="4px solid green.500">
+                <Text color="green.700">
+                  ✅ Cliente: <strong>{nombreUsuario}</strong>
+                </Text>
+                <Button mt={2} size="sm" colorScheme="gray" onClick={() => {
+                  setUsuarioEncontrado(false);
+                  setDni('');
+                  setApellido('');
+                  setUserId('');
+                  setNombreUsuario('');
+                  setUsuariosMultiples([]);
+                  setMostrarSelect(false);
+                }}>
+                  Buscar otro cliente
+                </Button>
+              </Box>
+            </>
+          )}
 
           <FormControl isRequired>
             <FormLabel>Monto</FormLabel>
@@ -246,7 +356,7 @@ const formatearFecha = (fecha) => {
           <Button type="submit" colorScheme="teal" w="full" isDisabled={!usuarioEncontrado}>
             Enviar solicitud
           </Button>
-          <Button colorScheme="purple" w="full" onClick={simularPrestamo}>
+          <Button colorScheme="purple" w="full" onClick={simularPrestamo} isDisabled={!usuarioEncontrado}>
             Simular préstamo
           </Button>
         </Stack>

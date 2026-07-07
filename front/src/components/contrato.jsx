@@ -123,7 +123,7 @@ export default function Contrato() {
       
 
       <Box border="2px solid black">
-        <Box p={6} fontSize="11.5px" lineHeight="1.7" fontFamily="Arial">
+        <Box p={6} fontSize="11px" lineHeight="1.7" fontFamily="Arial">
           {/* HEADER */}
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Image src={logo} alt="Logo" boxSize="80px" />
@@ -134,7 +134,7 @@ export default function Contrato() {
 
           <Box mt={2} textAlign="right">
             <Text>Cipolletti</Text>
-            <Text>{fechaHoy}</Text>
+            <Text>{formatFecha(prestamo.fechaInicio)}</Text>
           </Box>
 
           {/* TEXTO */}
@@ -194,8 +194,9 @@ export default function Contrato() {
 
           {/* FIRMA */}
           <Box mt={8} textAlign="center">
+            
+            <Text mt="104px">_________________________</Text>
             <Text>Firma y aclaración del solicitante</Text>
-            <Text mt="44px">_________________________</Text>
           </Box>
         </Box>
       </Box>

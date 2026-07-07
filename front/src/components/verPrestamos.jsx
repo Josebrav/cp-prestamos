@@ -242,6 +242,17 @@ export default function VerPrestamos() {
                           <Text fontSize="sm">
                             Fecha: {new Date(prestamo.fechaInicio).toLocaleDateString("es-AR")}
                           </Text>
+
+                          <Text fontSize="sm" fontWeight="semibold" color={
+                            prestamo.estado === "cancelado" ? "gray.500" :
+                            prestamo.estado === "en legales" ? "red.500" :
+                            prestamo.estado === "pendiente" ? "orange.500" :
+                            prestamo.estado === "al dia" ? "green.500" :
+                            prestamo.estado === "vencido" ? "red.500" :
+                            "green.600"
+                          }>
+                            Estado: {prestamo.estado}
+                          </Text>
                         </Box>
                         <AccordionIcon />
                       </AccordionButton>
@@ -258,6 +269,12 @@ export default function VerPrestamos() {
                         </Text>
                         <Text>
                           <b>Cuotas:</b> {renderInfoCuotas(prestamo.cuotas)}
+                        </Text>
+                        <Text>
+                          <b>Tipo de tasa:</b> {prestamo.tipoTasa ?? "-"}
+                        </Text>
+                        <Text>
+                          <b>Tasa de mora anual:</b> {prestamo.tasaMoraAnual ? `${prestamo.tasaMoraAnual}%` : "-"}
                         </Text>
                       </Box>
                       {prestamo.estado !== "cancelado" && (

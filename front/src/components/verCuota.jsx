@@ -305,6 +305,18 @@ export default function VerCuota() {
   const totalPagado = (cuota.PagoCuota || [])
     .reduce((acc, p) => acc + val(p.monto), 0);
 
+  const conceptoPago = (() => {
+    if (!cuota) return '';
+    const pagado = totalPagado || val(cuota.montoPagado);
+    const montoConInteresVal = cuota.montoConInteres !== null && cuota.montoConInteres !== undefined ? val(cuota.montoConInteres) : null;
+    const montoOriginal = val(cuota.monto);
+    const restante = montoConInteresVal !== null ? montoConInteresVal : Math.max(0, montoOriginal - pagado);
+
+    if (restante <= 0 || cuota.estado === 'pagada') return 'Prestamo personal - Pago total de cuota';
+    if (pagado > 0) return 'Prestamo personal - Pago parcial de cuota';
+    return 'Prestamo personal - Pago de cuota';
+  })();
+
   return (
     <Box backgroundColor={"white"}>
       {/* Panel superior (no imprimible) */}
@@ -471,6 +483,10 @@ export default function VerCuota() {
 
               <Text position="absolute" top="105px" left="210px">
                 {capitalize(cliente?.name)} {capitalize(cliente?.surname)}
+              </Text>
+
+              <Text position="absolute" top="220px" left="220px">
+                {conceptoPago}
               </Text>
 
               <Text position="absolute" top="136px" left="280px" w="50%">

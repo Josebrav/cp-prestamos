@@ -48,8 +48,18 @@ const navigate = useNavigate();
     );
   }
 
-  // Calcular total
-  const totalMonto = data.reduce((acc, item) => acc + Number(item.montoRestante), 0);
+  // Filtrar solo préstamos con cuotas vencidas
+  const filteredData = data.filter((item) => {
+    const cuotasVencidas = Number(item.cuotasVencidas ?? item.cuotasRestantes ?? 0);
+    const estado = (item.estado || "").toString().toLowerCase();
+    return cuotasVencidas > 0 || estado.includes("venc");
+  });
+
+  // Calcular total sobre los ítems filtrados
+  const totalMonto = filteredData.reduce(
+    (acc, item) => acc + Number(item.montoPendiente ?? item.montoRestante ?? 0),
+    0
+  );
 
   const handlePrint = () => {
   const contenido = document.getElementById("print-area").innerHTML;
@@ -151,27 +161,39 @@ const navigate = useNavigate();
               <Th>N° Control</Th>
               <Th>Estado</Th>
               <Th>Cuotas Vencidas</Th>
-              <Th>Monto Adeudado</Th>
+              <Th>Monto Final</Th>
+              <Th>Monto Pendiente</Th>
+              <Th>Intereses</Th>
               <Th>Cliente</Th>
             </Tr>
           </Thead>
           <Tbody>
-            {data.map((item, idx) => (
-              <Tr key={idx}>
-                <Td>{item.numeroControl}</Td>
-                <Td>{item.estado}</Td>
-                <Td>{item.cuotasRestantes}</Td>
-                <Td>${Number(item.montoRestante).toLocaleString()}</Td>
-                <Td>{item.cliente}</Td>
+            {filteredData.length === 0 ? (
+              <Tr>
+                <Td colSpan={7} textAlign="center">
+                  No hay cuotas vencidas para mostrar.
+                </Td>
               </Tr>
-            ))}
+            ) : (
+              filteredData.map((item, idx) => (
+                <Tr key={idx}>
+                  <Td>{item.numeroControl}</Td>
+                  <Td>{item.estado}</Td>
+                  <Td>{item.cuotasRestantes ?? item.cuotasVencidas ?? 0}</Td>
+                  <Td>${Number(item.montoFinal ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Td>
+                  <Td>${Number(item.montoPendiente ?? item.montoRestante ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Td>
+                  <Td>${Number(item.intereses ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Td>
+                  <Td>{item.cliente}</Td>
+                </Tr>
+              ))
+            )}
           </Tbody>
         </Table>
 
         {/* Total de montos */}
         <Box textAlign="right" mt={2} pr={4}>
           <Text fontWeight="bold" fontSize="lg" mr={"10%"}>
-            TOTAL = ${totalMonto.toLocaleString()}
+            TOTAL = ${totalMonto.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
           
         </Box>

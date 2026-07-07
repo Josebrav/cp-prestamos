@@ -21,11 +21,19 @@ import {
   ModalCloseButton,
   ModalBody,
   useDisclosure,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  IconButton,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
+import { FiPrinter, FiSearch } from 'react-icons/fi';
 
 
 export default function MostrarPrestamos() {
@@ -34,11 +42,19 @@ export default function MostrarPrestamos() {
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [cuotas, setCuotas] = useState([]);
   const [prestamoSeleccionado, setPrestamoSeleccionado] = useState(null);
-   const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const bgColor = useColorModeValue('white', 'gray.800');
+
+  const formatMoney = (num) => {
+    if (num === null || num === undefined) return "-";
+    return Number(num).toLocaleString("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   const fetchPrestamos = async () => {
     try {
@@ -71,7 +87,7 @@ export default function MostrarPrestamos() {
   const handleVerCuotas = (id) => {
     const prestamo = prestamos.find((p) => p.id === id);
     setCuotas(prestamo.cuotas || []);
-    setPrestamoSeleccionado(id);
+    setPrestamoSeleccionado(prestamo);
     onOpen();
   };
 
@@ -286,30 +302,123 @@ export default function MostrarPrestamos() {
       </Accordion>
 
       {/* Modal para cuotas */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Cuotas del préstamo </ModalHeader>
+          <ModalHeader>Cuotas del préstamo</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            {cuotas.length > 0 ? (
-              cuotas
-                .slice()
-                .sort((a, b) => a.numeroCuota - b.numeroCuota)
-                .map((cuota, idx) => (
-                  <Box key={idx} p={3} borderWidth="1px" borderRadius="md" mb={2}>
-                    <Text><b>Fecha de vencimiento:</b> {cuota.fechaVencimiento}</Text>
-                    <Text>
-                      <b>Monto:</b> $
-                      {Math.max(
-                        parseFloat(cuota.monto) || 0,
-                        parseFloat(cuota.montoConInteres) || 0
-                      ).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
-                    <Text><b>Estado:</b> {cuota.estado}</Text>
-                    <Text><b>Cuota N°: {cuota.numeroCuota}</b></Text>
-                  </Box>
-                ))
+          <ModalBody pb={6}>
+            {cuotas.length > 0 && prestamoSeleccionado ? (
+              <Box overflowX="auto">
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>N°</Th>
+                      <Th>Vencimiento</Th>
+                      <Th>Monto</Th>
+                      <Th>Monto con Interés o Restante</Th>
+                      <Th>Estado</Th>
+                      <Th>Pagos parciales</Th>
+                      <Th>Pago total</Th>
+                      <Th>Pagar e Imprimir</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {cuotas
+                      .slice()
+                      .sort((a, b) => (a.numeroCuota ?? a.numero) - (b.numeroCuota ?? b.numero))
+                      .map((cuota, index, cuotasOrdenadas) => {
+                        const num = cuota.numeroCuota ?? cuota.numero;
+                        const prestamoCancelado = prestamoSeleccionado.estado === "cancelado";
+                        const isPaid = cuota.estado === "pagada";
+                        const prevIsPaid = index > 0 ? cuotasOrdenadas[index - 1].estado === "pagada" : false;
+
+                        const displayAmount = isPaid
+                          ? cuota.montoPagado ?? cuota.montoConInteres ?? cuota.monto ?? 0
+                          : cuota.estado === "vencida"
+                            ? cuota.monto ?? 0
+                            : cuota.monto ?? 0;
+
+                        const showLupa = isPaid;
+                        const showPrinter = (index === 0 || isPaid || prevIsPaid) && prestamoSeleccionado.estado !== "pendiente";
+                        const tienePagos = cuota.PagoCuota?.length > 0;
+
+                        return (
+                          <Tr key={cuota.id}>
+                            <Td>{num}</Td>
+                            <Td>{cuota.fechaVencimiento}</Td>
+                            <Td>${formatMoney(displayAmount)}</Td>
+                            <Td>${formatMoney(cuota.montoConInteres ?? cuota.monto ?? 0)}</Td>
+                            <Td color={cuota.estado === "vencida" ? "red.500" : "inherit"}>
+                              {cuota.estado}
+                            </Td>
+                            <Td>
+                              {tienePagos && !prestamoCancelado ? (
+                                <Button
+                                  size="xs"
+                                  colorScheme="orange"
+                                  onClick={() => {
+                                    const detalle = cuota.PagoCuota.map(
+                                      (p) => `
+                                        <p><b>Fecha:</b> ${new Date(p.fechaPago).toLocaleDateString("es-AR", { timeZone: "UTC" })}</p>
+                                        <p><b>Monto:</b> $${formatMoney(p.monto)}</p>
+                                        <hr/>
+                                      `
+                                    ).join("");
+
+                                    Swal.fire({
+                                      title: `Pagos - Cuota ${num}`,
+                                      html: detalle,
+                                      width: 500,
+                                    });
+                                  }}
+                                >
+                                  Ver
+                                </Button>
+                              ) : (
+                                "-"
+                              )}
+                            </Td>
+                            <Td>
+                              {showLupa && !prestamoCancelado && (
+                                <IconButton
+                                  aria-label="Ver detalles de pago"
+                                  icon={<FiSearch />}
+                                  size="sm"
+                                  colorScheme="teal"
+                                  variant="outline"
+                                  onClick={() =>
+                                    Swal.fire({
+                                      title: `Cuota #${num}`,
+                                      html: `
+                                        <p><b>Fecha de pago:</b> ${cuota.fechaPago ? new Date(cuota.fechaPago).toLocaleDateString("es-AR", { timeZone: "UTC" }) : "-"}</p>
+                                        <p><b>Monto pagado:</b> $${formatMoney(displayAmount)}</p>
+                                        <p><b>Interés pagado:</b> $${formatMoney(cuota.interesPagado ?? 0)}</p>
+                                      `,
+                                      icon: "info",
+                                    })
+                                  }
+                                />
+                              )}
+                            </Td>
+                            <Td>
+                              {showPrinter && !prestamoCancelado && (
+                                <IconButton
+                                  aria-label="Imprimir cuota"
+                                  icon={<FiPrinter />}
+                                  size="sm"
+                                  colorScheme="blue"
+                                  variant="outline"
+                                  onClick={() => navigate(`/cuota/${cuota.id}`)}
+                                />
+                              )}
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                  </Tbody>
+                </Table>
+              </Box>
             ) : (
               <Text>No hay cuotas disponibles.</Text>
             )}
