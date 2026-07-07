@@ -2,6 +2,7 @@ const {Router} = require('express');
 const postUserHandler = require('../handlers/postUserHandler');
 const deleteUserHandler = require('../handlers/deleteUserHandler');
 const getUserByDniHandler = require('../handlers/getUserByDniHandler');
+const getUserBySurnameHandler = require('../handlers/getUserBySurnameHandler');
 
 const getUserByIdHandler = require('../handlers/getUserByIdHandler');
 const getPrestamosHandler = require('../handlers/getPrestamosByEstadoHandler');
@@ -43,6 +44,7 @@ router.get('/prestamos/usuario/:id', getPrestamosByUserHandler);
 router.post('/registro', postUserHandler);
 router.delete('/borrar', deleteUserHandler);
 router.post('/buscar-dni', getUserByDniHandler);
+router.post('/buscar-apellido', getUserBySurnameHandler);
 router.get('/usuarios', getAllUsersHandler);
 router.get("/usuario/:id", getUserByIdHandler);
 router.put('/usuario/:id', updateUserHandler);

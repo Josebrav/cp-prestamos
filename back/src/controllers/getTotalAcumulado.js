@@ -1,39 +1,62 @@
 // controllers/getTotalAcumulado.js
 const { Prestamo, Cuota, User } = require('../database');
-const { Op } = require('sequelize');
 
 const getTotalAcumulado = async (req, res) => {
   try {
-    const hoy = new Date();
-
-    const cuotasVencidas = await Cuota.findAll({
-      where: {
-        fechaVencimiento: { [Op.lt]: hoy },
-        estado: { [Op.not]: 'pagada' }
-      },
+    const prestamos = await Prestamo.findAll({
       include: [
-        { model: Prestamo, include: [{ model: User, attributes: ['name', 'surname'] }] }
-      ]
+        {
+          model: User,
+          attributes: ['name', 'surname'],
+        },
+        {
+          model: Cuota,
+          as: 'cuotas',
+          attributes: ['id', 'numeroCuota', 'monto', 'montoConInteres', 'estado'],
+        },
+      ],
+      order: [['numeroControl', 'ASC']],
     });
 
-    // Agrupar por préstamo
-    const prestamosMap = {};
-    cuotasVencidas.forEach(c => {
-      const pId = c.prestamoId;
-      if (!prestamosMap[pId]) {
-        prestamosMap[pId] = {
-          numeroControl: c.Prestamo.numeroControl,
-          estado: c.Prestamo.estado,
-          cuotasRestantes: 0,
-          montoRestante: 0,
-          cliente: `${c.Prestamo.User?.name || ''} ${c.Prestamo.User?.surname || ''}`.trim()
+    const reportData = prestamos
+      .map((prestamo) => {
+        // Considerar sólo cuotas vencidas (no incluir 'al dia')
+        const cuotasPendientes = (prestamo.cuotas || []).filter(
+          (cuota) => (cuota.estado || '').toString().toLowerCase() === 'vencida'
+        );
+
+        if (cuotasPendientes.length === 0) {
+          return null;
+        }
+
+        const montoPendiente = cuotasPendientes.reduce(
+          (acc, cuota) => acc + Number(cuota.montoConInteres ?? cuota.monto ?? 0),
+          0
+        );
+
+        const intereses = cuotasPendientes.reduce(
+          (acc, cuota) => {
+            const montoBase = Number(cuota.monto ?? 0);
+            const montoConInteres = Number(cuota.montoConInteres ?? cuota.monto ?? 0);
+            return acc + Math.max(0, montoConInteres - montoBase);
+          },
+          0
+        );
+
+        return {
+          numeroControl: prestamo.numeroControl,
+          estado: prestamo.estado,
+          cuotasRestantes: cuotasPendientes.length,
+          montoPendiente: Number(montoPendiente.toFixed(2)),
+          montoRestante: Number(montoPendiente.toFixed(2)),
+          montoFinal: Number(prestamo.montoFinal ?? 0),
+          intereses: Number(intereses.toFixed(2)),
+          cliente: `${prestamo.User?.name || ''} ${prestamo.User?.surname || ''}`.trim(),
         };
-      }
-      prestamosMap[pId].cuotasRestantes += 1;
-      prestamosMap[pId].montoRestante += Number(c.monto || 0);
-    });
+      })
+      .filter(Boolean);
 
-    res.json(Object.values(prestamosMap));
+    res.json(reportData);
   } catch (error) {
     console.error('Error generando total acumulado:', error);
     res.status(500).json({ error: 'Error generando total acumulado' });

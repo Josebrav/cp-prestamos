@@ -35,14 +35,16 @@ const getResumenSGP = async (req, res) => {
     const prestamosCobroMes = [...new Set(cuotasMes.map(c => c.prestamoId))].length;
 
     // 3. Total a cobrar acumulado (cuotas vencidas hasta fin de mes)
+    // Considerar solo cuotas efectivamente vencidas (estado === 'vencida')
     const cuotasAcumuladas = await Cuota.findAll({
       where: {
         fechaVencimiento: { [Op.lte]: ultimoDiaMes },
-        estado: { [Op.not]: 'pagada' }
+        estado: 'vencida'
       },
       include: [Prestamo],
     });
-    const totalAcumuladoMonto = cuotasAcumuladas.reduce((acc, c) => acc + Number(c.monto || 0), 0);
+    // Sumar montoConInteres cuando exista, sino monto
+    const totalAcumuladoMonto = cuotasAcumuladas.reduce((acc, c) => acc + Number(c.montoConInteres ?? c.monto ?? 0), 0);
     const totalAcumuladoPrestamos = [...new Set(cuotasAcumuladas.map(c => c.prestamoId))].length;
 
     // 4. Restante a cobrar a futuro (cuotas desde mañana en adelante)
@@ -58,7 +60,20 @@ const getResumenSGP = async (req, res) => {
         { model: Prestamo, include: [{ model: User, attributes: ['name', 'surname'] }] }
       ],
     });
-    const totalFuturoMonto = cuotasFuturo.reduce((acc, c) => acc + Number(c.monto || 0), 0);
+    const totalFuturoMonto = cuotasFuturo.reduce((acc, c) => {
+      // Si existe montoConInteres se interpreta como el monto restante (pagar con intereses)
+      const montoConInteresVal = c.montoConInteres !== null && c.montoConInteres !== undefined
+        ? Number(c.montoConInteres)
+        : null;
+      const montoPagadoVal = c.montoPagado !== null && c.montoPagado !== undefined ? Number(c.montoPagado) : 0;
+      const montoOriginal = Number(c.monto || 0);
+
+      const restante = montoConInteresVal !== null
+        ? montoConInteresVal
+        : Math.max(0, montoOriginal - montoPagadoVal);
+
+      return acc + restante;
+    }, 0);
     const totalFuturoPrestamos = [...new Set(cuotasFuturo.map(c => c.prestamoId))].length;
 
     // Respuesta final
